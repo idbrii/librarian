@@ -160,8 +160,8 @@ def main():
         # librarian add puppypark windfield
         clone_path = config[args.module]['CLONE']
         working_dir = os.getcwd()
-        if working_dir.find(args.module) < 0:
-            print("Current path ({}) doesn't contain module '{}'.".format(working_dir, args.module))
+        if working_dir.find(args.project) < 0:
+            print("Current path ({}) doesn't contain name of project '{}'.".format(working_dir, args.project))
             answer = input("Are you in the right place? ")
             if answer.lower()[0] != 'y':
                 sys.exit(-1)
