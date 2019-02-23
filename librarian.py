@@ -164,6 +164,7 @@ def main():
         try:
             config.add_section(args.kind)
             section = config[args.kind]
+            print("Added new kind '{}'.".format(args.kind))
         except configparser.DuplicateSectionError:
             section = config[args.kind]
             print('''Kind '{}' already registered:
@@ -176,10 +177,16 @@ def main():
                        section.get('INCLUDE_PATTERN', '<none>'), args.include_pattern,
                        section.get('EXCLUDE_PATTERN', '<none>'), args.exclude_pattern,
                        section.get('ROOT_MARKER', '<none>'), args.root_marker))
-        section['LIB_PATH'] = args.path
-        section['INCLUDE_PATTERN'] = args.include_pattern
-        section['EXCLUDE_PATTERN'] = args.exclude_pattern
-        section['ROOT_MARKER'] = args.root_marker
+        has_data = (len(args.path) > 0
+            and len(args.include_pattern) > 0
+            and len(args.exclude_pattern) > 0
+            and len(args.root_marker) > 0)
+        if has_data:
+            section['LIB_PATH'] = args.path
+            section['INCLUDE_PATTERN'] = args.include_pattern
+            section['EXCLUDE_PATTERN'] = args.exclude_pattern
+            section['ROOT_MARKER'] = args.root_marker
+        # else we just outputted the last data. Good enough for now.
 
     elif args.action == 'archive':
         # librarian archive love windfield https://github.com/adnzzzzZ/windfield.git
