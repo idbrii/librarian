@@ -8,6 +8,7 @@ from __future__ import unicode_literals
 import argparse
 import configparser
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -41,9 +42,15 @@ def _get_args():
     archive.add_argument('--path',
                          default='',
                          help='The path from the project repo root where modules are added. ex: src/lib/')
-    archive.add_argument('--include',
+    archive.add_argument('--include-pattern',
                          default='',
-                         help='Included files')
+                         help='Regular expression of files to include when copying to project. If not provided, all files are included.')
+    archive.add_argument('--exclude-pattern',
+                         default='',
+                         help='Regular expression of files to exclude when copying to project. If not provided, all files are included.')
+    archive.add_argument('--root-marker',
+                         default='',
+                         help='A file that indicates the root of the module (may not be the root of the repo). Useful to ignore tests and example code in well-organized repos.')
 
     archive = subparsers.add_parser('archive',
                                     help='Add a module to the Library.')
@@ -83,13 +90,37 @@ def _write_config(config):
         config.write(f)
 
 
-def _copy_and_overwrite(from_path, to_path):
+def _find_src_module_path(path, root_marker, should_include_fn):
+    """Find where the include-able module starts.
+
+    _find_src_module_path(string, string, function) -> string
+    """
+    first_includeable = []
+    for dirpath,dirs,files in os.walk(path, topdown=True):
+        markers = [dirpath for f in files if f == root_marker]
+        if markers:
+            return markers[0]
+        if not first_includeable:
+            first_includeable = [dirpath for f in files if should_include_fn(f)]
+
+    # no marker found
+    if first_includeable:
+        return first_includeable[0]
+    else:
+        print('Failed to file includable files in {}! Aborting...'.format(path))
+        sys.exit(-2)
+
+
+def _copy_and_overwrite(from_path, to_path, should_include_fn):
+    print('Copying {} to {}'.format(from_path, to_path))
     if os.path.exists(to_path):
         shutil.rmtree(to_path)
-    shutil.copytree(from_path, to_path, ignore=shutil.ignore_patterns('.git'))
+    def ignore(dir_path, items):
+        return [f for f in items if not should_include_fn(f)]
+    shutil.copytree(from_path, to_path, ignore=ignore)
 
 
-def add_module(module, kind, module_path, target_repo_path, target_path):
+def add_module(module, kind, module_path, target_repo_path, target_path, cfg):
     target_repo = git.Repo(target_repo_path)
     if target_repo.is_dirty():
         print('Failed to add module {}. Target repo is dirty:\n{}'.format(module, target_repo_path))
@@ -101,7 +132,25 @@ def add_module(module, kind, module_path, target_repo_path, target_path):
     src_repo = git.Repo(module_path)
     master = src_repo.remotes.origin.refs.master
     branch = src_repo.create_head(module, master).set_tracking_branch(master)
-    _copy_and_overwrite(module_path, target_path)
+
+    include_re = None
+    exclude_re = None
+    if len(cfg['INCLUDE_PATTERN']) > 0:
+        include_re = re.compile(cfg['INCLUDE_PATTERN'])
+    if len(cfg['EXCLUDE_PATTERN']) > 0:
+        exclude_re = re.compile(cfg['EXCLUDE_PATTERN'])
+
+    if include_re is None and exclude_re is None:
+        def should_include(f):
+            return f != '.git'
+    else:
+        def should_include(f):
+            return (f != '.git'
+                    and (include_re is None or include_re.match())
+                    and (exclude_re is None or exclude_re.match() is None))
+
+    module_path = _find_src_module_path(module_path, cfg['ROOT_MARKER'], should_include)
+    _copy_and_overwrite(module_path, target_path, should_include)
 
 
 def main():
@@ -119,12 +168,18 @@ def main():
             section = config[args.kind]
             print('''Kind '{}' already registered:
     lib_path: {} -> {}
-    include: {} -> {}
+    include_pattern: {} -> {}
+    exclude_pattern: {} -> {}
+    root_marker: {} -> {}
             '''.format(args.kind,
                        section.get('LIB_PATH', '<none>'), args.path,
-                       section.get('INCLUDE', '<none>'), args.include))
+                       section.get('INCLUDE_PATTERN', '<none>'), args.include_pattern,
+                       section.get('EXCLUDE_PATTERN', '<none>'), args.exclude_pattern,
+                       section.get('ROOT_MARKER', '<none>'), args.root_marker))
         section['LIB_PATH'] = args.path
-        section['INCLUDE'] = args.include
+        section['INCLUDE_PATTERN'] = args.include_pattern
+        section['EXCLUDE_PATTERN'] = args.exclude_pattern
+        section['ROOT_MARKER'] = args.root_marker
 
     elif args.action == 'archive':
         # librarian archive love windfield https://github.com/adnzzzzZ/windfield.git
@@ -172,7 +227,8 @@ def main():
                    config[args.module]['KIND'],
                    config[args.module]['CLONE'],
                    working_dir,
-                   target_path)
+                   target_path,
+                   config[kind])
 
     elif args.action == 'sync':
         # librarian sync puppypark windfield
