@@ -10,6 +10,7 @@ import configparser
 import os
 import shutil
 import subprocess
+import sys
 
 import git
 
@@ -159,6 +160,12 @@ def main():
         # librarian add puppypark windfield
         clone_path = config[args.module]['CLONE']
         working_dir = os.getcwd()
+        if working_dir.find(args.module) < 0:
+            print("Current path ({}) doesn't contain module '{}'.".format(working_dir, args.module))
+            answer = input("Are you in the right place? ")
+            if answer.lower()[0] != 'y':
+                sys.exit(-1)
+
         kind = config[args.module]['KIND']
         target_path = os.path.join(working_dir, config[kind]['LIB_PATH'], args.module)
         add_module(args.module,
