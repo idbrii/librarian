@@ -8,6 +8,7 @@ from __future__ import unicode_literals
 import argparse
 import configparser
 import os
+import pprint as pretty
 import re
 import shutil
 import subprocess
@@ -24,7 +25,7 @@ CLONES_PATH = os.path.join(ROOT_PATH, "clones/")
 def _get_args():
     """Program arguments
 
-    librarian config love --path src/lib/
+    librarian config love --path src/lib/ --root-marker init.lua --include-pattern ".*.lua"
     librarian archive love windfield https://github.com/adnzzzzZ/windfield.git
     librarian add puppypark windfield
     librarian sync puppypark windfield
@@ -146,8 +147,8 @@ def add_module(module, kind, module_path, target_repo_path, target_path, cfg):
     else:
         def should_include(f):
             return (f != '.git'
-                    and (include_re is None or include_re.match())
-                    and (exclude_re is None or exclude_re.match() is None))
+                    and (include_re is None or include_re.match(f))
+                    and (exclude_re is None or exclude_re.match(f) is None))
 
     module_path = _find_src_module_path(module_path, cfg['ROOT_MARKER'], should_include)
     _copy_and_overwrite(module_path, target_path, should_include)
