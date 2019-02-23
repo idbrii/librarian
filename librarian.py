@@ -25,7 +25,7 @@ CLONES_PATH = os.path.join(ROOT_PATH, "clones/")
 def _get_args():
     """Program arguments
 
-    librarian config love --path src/lib/ --root-marker init.lua --include-pattern ".*.lua"
+    librarian config love --path src/lib/ --root-marker init.lua --rename-single-file-root-marker ".*.lua" --include-pattern ".*.lua|LICENSE.*"
     librarian archive love windfield https://github.com/adnzzzzZ/windfield.git
     librarian add puppypark windfield
     librarian sync puppypark windfield
@@ -52,6 +52,9 @@ def _get_args():
     archive.add_argument('--root-marker',
                          default='',
                          help='A file that indicates the root of the module (may not be the root of the repo). Useful to ignore tests and example code in well-organized repos.')
+    archive.add_argument('--rename-single-file-root-marker',
+                         default='',
+                         help='If there is no root marker but there is a single file matching this regex, then rename it to the root marker.')
 
     archive = subparsers.add_parser('archive',
                                     help='Add a module to the Library.')
@@ -94,7 +97,7 @@ def _write_config(config):
 def _find_src_module_path(path, root_marker, should_include_fn):
     """Find where the include-able module starts.
 
-    _find_src_module_path(string, string, function) -> string
+    _find_src_module_path(str, str, function) -> str
     """
     first_includeable = []
     for dirpath,dirs,files in os.walk(path, topdown=True):
@@ -119,6 +122,24 @@ def _copy_and_overwrite(from_path, to_path, should_include_fn):
     def ignore(dir_path, items):
         return [f for f in items if not should_include_fn(f)]
     shutil.copytree(from_path, to_path, ignore=ignore)
+
+
+def _rename_if_single_file(path, new_name, include_re):
+    """If there's only a single file in 'path', rename it to new_name.
+
+    _rename_if_single_file(str, str) -> None
+    """
+    file = None
+    for dirpath,dirs,files in os.walk(path, topdown=True):
+        if include_re:
+            files = [f for f in files if include_re.match(f)]
+        if not dirs and len(files) == 1:
+            f = files[0]
+            src = os.path.join(dirpath, f)
+            dst = os.path.join(dirpath, new_name)
+            shutil.move(src, dst)
+        # either way, return. We don't need to go deeper.
+        return
 
 
 def add_module(module, kind, module_path, target_repo_path, target_path, cfg):
@@ -150,8 +171,12 @@ def add_module(module, kind, module_path, target_repo_path, target_path, cfg):
                     and (include_re is None or include_re.match(f))
                     and (exclude_re is None or exclude_re.match(f) is None))
 
-    module_path = _find_src_module_path(module_path, cfg['ROOT_MARKER'], should_include)
+    root_marker = cfg['ROOT_MARKER']
+    module_path = _find_src_module_path(module_path, root_marker, should_include)
     _copy_and_overwrite(module_path, target_path, should_include)
+    single = cfg['RENAME_ROOT_MARKER_PATTERN']
+    if single:
+        _rename_if_single_file(target_path, root_marker, re.compile(single))
 
 
 def main():
@@ -173,11 +198,13 @@ def main():
     include-pattern: {} -> {}
     exclude-pattern: {} -> {}
     root-marker: {} -> {}
+    rename-single-file-root-marker: {} -> {}
             '''.format(args.kind,
                        section.get('LIB_PATH', '<none>'), args.path,
                        section.get('INCLUDE_PATTERN', '<none>'), args.include_pattern,
                        section.get('EXCLUDE_PATTERN', '<none>'), args.exclude_pattern,
-                       section.get('ROOT_MARKER', '<none>'), args.root_marker))
+                       section.get('ROOT_MARKER', '<none>'), args.root_marker,
+                       section.get('RENAME_ROOT_MARKER_PATTERN', '<none>'), args.rename_single_file_root_marker))
         has_data = (len(args.path) > 0
             or len(args.include_pattern) > 0
             or len(args.exclude_pattern) > 0
@@ -187,6 +214,7 @@ def main():
             section['INCLUDE_PATTERN'] = args.include_pattern
             section['EXCLUDE_PATTERN'] = args.exclude_pattern
             section['ROOT_MARKER'] = args.root_marker
+            section['RENAME_ROOT_MARKER_PATTERN'] = str(args.rename_single_file_root_marker)
         else:
             # we just outputted the last data. Good enough for now.
             print('No config changes written.')
