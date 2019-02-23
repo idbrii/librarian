@@ -168,10 +168,10 @@ def main():
         except configparser.DuplicateSectionError:
             section = config[args.kind]
             print('''Kind '{}' already registered:
-    lib_path: {} -> {}
-    include_pattern: {} -> {}
-    exclude_pattern: {} -> {}
-    root_marker: {} -> {}
+    path: {} -> {}
+    include-pattern: {} -> {}
+    exclude-pattern: {} -> {}
+    root-marker: {} -> {}
             '''.format(args.kind,
                        section.get('LIB_PATH', '<none>'), args.path,
                        section.get('INCLUDE_PATTERN', '<none>'), args.include_pattern,
