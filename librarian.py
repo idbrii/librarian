@@ -209,8 +209,17 @@ def _rename_if_single_file(path, new_name, include_re):
         return
 
 
-def add_module(project, module, kind, module_path, target_repo_path, target_path, cfg):
-    target_repo = git.Repo(target_repo_path)
+def _add_module(args, config):
+    # librarian add puppypark windfield
+    target_repo_path = _get_project_dir(args.project)
+    kind             = config[args.module]['KIND']
+    target_path      = os.path.join(target_repo_path, config[kind]['LIB_PATH'], args.module)
+    project          = args.project
+    module           = args.module
+    module_path      = config[args.module]['CLONE']
+    cfg              = config[kind]
+    target_repo      = git.Repo(target_repo_path)
+
     if target_repo.is_dirty():
         print('Failed to add module {}. Target repo is dirty:\n{}'.format(module, target_repo_path))
         print(target_repo.git.status())
@@ -331,19 +340,7 @@ def main():
         _archive_module(args, config)
 
     elif args.action == 'add':
-        # librarian add puppypark windfield
-        clone_path = config[args.module]['CLONE']
-        working_dir = _get_project_dir(args.project)
-
-        kind = config[args.module]['KIND']
-        target_path = os.path.join(working_dir, config[kind]['LIB_PATH'], args.module)
-        add_module(args.project,
-                   args.module,
-                   config[args.module]['KIND'],
-                   config[args.module]['CLONE'],
-                   working_dir,
-                   target_path,
-                   config[kind])
+        _add_module(args, config)
 
     elif args.action == 'sync':
         # librarian sync puppypark windfield
