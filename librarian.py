@@ -138,9 +138,9 @@ def _acquire_module(args, config):
         config.add_section(args.module)
         section = config[args.module]
 
-        section['KIND'] = args.kind
-        section['CLONE'] = clone_path
-        section['URL'] = args.clone_url
+        section['kind'] = args.kind
+        section['clone'] = clone_path
+        section['url'] = args.clone_url
 
     except configparser.DuplicateSectionError:
         section = config[args.module]
@@ -149,9 +149,9 @@ kind: {}
 checkout: {}
 url: {}
         '''.format(args.module,
-                   section['KIND'],
-                   section['CLONE'],
-                   section['URL']))
+                   section['kind'],
+                   section['clone'],
+                   section['url']))
 
     try:
         origin = repo.remotes.origin
@@ -237,11 +237,11 @@ def _build_should_include(cfg):
 def _checkout_module(args, config):
     # librarian checkout puppypark windfield
     target_repo_path = _get_project_dir(args.project)
-    kind             = config[args.module]['KIND']
+    kind             = config[args.module]['kind']
     target_path      = os.path.join(target_repo_path, config[kind]['lib_path'], args.module)
     project          = args.project
     module           = args.module
-    module_path      = config[args.module]['CLONE']
+    module_path      = config[args.module]['clone']
     cfg              = config[kind]
     target_repo      = git.Repo(target_repo_path)
 
@@ -276,7 +276,7 @@ def _checkout_module(args, config):
         
 {0} is from {2}.
 \t{0}@{3}
-\tMessage: "{4}"'''.format(module, action, config[args.module]['URL'], branch.commit.hexsha, branch.commit.message.strip())
+\tMessage: "{4}"'''.format(module, action, config[args.module]['url'], branch.commit.hexsha, branch.commit.message.strip())
         target_repo.index.commit(msg)
         print('Commit complete:\n'+ msg)
     else:
@@ -285,12 +285,12 @@ def _checkout_module(args, config):
 
 def _checkin_module(args, config):
     # librarian checkin puppypark windfield
-    kind             = config[args.module]['KIND']
+    kind             = config[args.module]['kind']
     working_dir      = _get_project_dir(args.project)
     src_path         = os.path.join(working_dir, config[kind]['lib_path'], args.module)
     project          = args.project
     module           = args.module
-    module_repo_path = config[args.module]['CLONE']
+    module_repo_path = config[args.module]['clone']
     cfg              = config[kind]
 
     repo = git.Repo(module_repo_path)
