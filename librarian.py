@@ -94,6 +94,73 @@ def _write_config(config):
         config.write(f)
 
 
+def _apply_config(args, config):
+    try:
+        config.add_section(args.kind)
+        section = config[args.kind]
+        print("Added new kind '{}'.".format(args.kind))
+    except configparser.DuplicateSectionError:
+        section = config[args.kind]
+        print('''Kind '{}' already registered:
+path: {} -> {}
+include-pattern: {} -> {}
+exclude-pattern: {} -> {}
+root-marker: {} -> {}
+rename-single-file-root-marker: {} -> {}
+        '''.format(args.kind,
+                   section.get('LIB_PATH', '<none>'), args.path,
+                   section.get('INCLUDE_PATTERN', '<none>'), args.include_pattern,
+                   section.get('EXCLUDE_PATTERN', '<none>'), args.exclude_pattern,
+                   section.get('ROOT_MARKER', '<none>'), args.root_marker,
+                   section.get('RENAME_ROOT_MARKER_PATTERN', '<none>'), args.rename_single_file_root_marker))
+    has_data = (len(args.path) > 0
+        or len(args.include_pattern) > 0
+        or len(args.exclude_pattern) > 0
+        or len(args.root_marker) > 0)
+    if has_data:
+        section['LIB_PATH'] = args.path
+        section['INCLUDE_PATTERN'] = args.include_pattern
+        section['EXCLUDE_PATTERN'] = args.exclude_pattern
+        section['ROOT_MARKER'] = args.root_marker
+        section['RENAME_ROOT_MARKER_PATTERN'] = str(args.rename_single_file_root_marker)
+    else:
+        # we just outputted the last data. Good enough for now.
+        print('No config changes written.')
+
+def _archive_module(args, config):
+    # librarian archive love windfield https://github.com/adnzzzzZ/windfield.git
+    clone_path = os.path.join(CLONES_PATH, args.module)
+    repo = git.Repo.init(clone_path)
+    try:
+        config.add_section(args.module)
+        section = config[args.module]
+
+        section['KIND'] = args.kind
+        section['CLONE'] = clone_path
+
+    except configparser.DuplicateSectionError:
+        section = config[args.module]
+        print('''Module '{}' already registered:
+kind: {}
+checkout: {}
+        '''.format(args.module,
+                   section['KIND'],
+                   section['CLONE']))
+
+    try:
+        origin = repo.remotes.origin
+    except AttributeError:
+        print('Cloning "{}" module "{}" into Library...'.format(args.kind, args.module))
+        origin = repo.create_remote('origin', args.clone_url)
+
+    assert(origin.exists())
+    print('Updating module "{}" to latest...'.format(args.module))
+    origin.fetch()
+    master = repo.create_head('master', origin.refs.master).set_tracking_branch(origin.refs.master)
+    master.checkout()
+    print('\tCommit: {}\n\tMessage: "{}"'.format(master.commit.hexsha, master.commit.message.strip()))
+
+
 def _find_src_module_path(path, root_marker, should_include_fn):
     """Find where the include-able module starts.
 
@@ -258,70 +325,10 @@ def main():
     config = _read_config()
     args = _get_args()
     if   args.action == 'config':
-        try:
-            config.add_section(args.kind)
-            section = config[args.kind]
-            print("Added new kind '{}'.".format(args.kind))
-        except configparser.DuplicateSectionError:
-            section = config[args.kind]
-            print('''Kind '{}' already registered:
-    path: {} -> {}
-    include-pattern: {} -> {}
-    exclude-pattern: {} -> {}
-    root-marker: {} -> {}
-    rename-single-file-root-marker: {} -> {}
-            '''.format(args.kind,
-                       section.get('LIB_PATH', '<none>'), args.path,
-                       section.get('INCLUDE_PATTERN', '<none>'), args.include_pattern,
-                       section.get('EXCLUDE_PATTERN', '<none>'), args.exclude_pattern,
-                       section.get('ROOT_MARKER', '<none>'), args.root_marker,
-                       section.get('RENAME_ROOT_MARKER_PATTERN', '<none>'), args.rename_single_file_root_marker))
-        has_data = (len(args.path) > 0
-            or len(args.include_pattern) > 0
-            or len(args.exclude_pattern) > 0
-            or len(args.root_marker) > 0)
-        if has_data:
-            section['LIB_PATH'] = args.path
-            section['INCLUDE_PATTERN'] = args.include_pattern
-            section['EXCLUDE_PATTERN'] = args.exclude_pattern
-            section['ROOT_MARKER'] = args.root_marker
-            section['RENAME_ROOT_MARKER_PATTERN'] = str(args.rename_single_file_root_marker)
-        else:
-            # we just outputted the last data. Good enough for now.
-            print('No config changes written.')
+        _apply_config(args, config)
 
     elif args.action == 'archive':
-        # librarian archive love windfield https://github.com/adnzzzzZ/windfield.git
-        clone_path = os.path.join(CLONES_PATH, args.module)
-        repo = git.Repo.init(clone_path)
-        try:
-            config.add_section(args.module)
-            section = config[args.module]
-
-            section['KIND'] = args.kind
-            section['CLONE'] = clone_path
-
-        except configparser.DuplicateSectionError:
-            section = config[args.module]
-            print('''Module '{}' already registered:
-    kind: {}
-    checkout: {}
-            '''.format(args.module,
-                       section['KIND'],
-                       section['CLONE']))
-
-        try:
-            origin = repo.remotes.origin
-        except AttributeError:
-            print('Cloning "{}" module "{}" into Library...'.format(args.kind, args.module))
-            origin = repo.create_remote('origin', args.clone_url)
-
-        assert(origin.exists())
-        print('Updating module "{}" to latest...'.format(args.module))
-        origin.fetch()
-        master = repo.create_head('master', origin.refs.master).set_tracking_branch(origin.refs.master)
-        master.checkout()
-        print('\tCommit: {}\n\tMessage: "{}"'.format(master.commit.hexsha, master.commit.message.strip()))
+        _archive_module(args, config)
 
     elif args.action == 'add':
         # librarian add puppypark windfield
