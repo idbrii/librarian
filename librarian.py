@@ -137,15 +137,18 @@ def _acquire_module(args, config):
 
         section['KIND'] = args.kind
         section['CLONE'] = clone_path
+        section['URL'] = args.clone_url
 
     except configparser.DuplicateSectionError:
         section = config[args.module]
         print('''Module '{}' already registered:
 kind: {}
 checkout: {}
+url: {}
         '''.format(args.module,
                    section['KIND'],
-                   section['CLONE']))
+                   section['CLONE'],
+                   section['URL']))
 
     try:
         origin = repo.remotes.origin
@@ -239,7 +242,7 @@ def _checkout_module(args, config):
     cfg              = config[kind]
     target_repo      = git.Repo(target_repo_path)
 
-    if target_repo.is_dirty():
+    if target_repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=True):
         print('Failed to checkout module {}. Target repo is dirty:\n{}'.format(module, target_repo_path))
         print(target_repo.git.status())
         return
@@ -255,12 +258,26 @@ def _checkout_module(args, config):
 
     root_marker = cfg['root_marker']
     module_path = _find_src_module_path(module_path, root_marker, should_include)
+    is_update = os.path.exists(target_path)
     _copy_and_overwrite(module_path, target_path, should_include)
     single = cfg['rename_root_marker_pattern']
     if single:
         renamed = _rename_if_single_file(target_path, root_marker, re.compile(single))
         if renamed:
             config[module]['renamed_root_marker'] = renamed
+
+    if target_repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=True):
+        target_repo.git.add(A=True)
+        action = 'Updated' if is_update else 'Added'
+        msg = '''Librarian: {1} module {0}
+        
+{0} retrieved from {2}
+\t{0}@{3}
+\tMessage: "{4}"'''.format(module, action, config[args.module]['URL'], branch.commit.hexsha, branch.commit.message.strip())
+        target_repo.index.commit(msg)
+        print('Commit complete:\n'+ msg)
+    else:
+        print('No changes to apply')
 
 
 def _checkin_module(args, config):
@@ -274,7 +291,7 @@ def _checkin_module(args, config):
     cfg              = config[kind]
 
     repo = git.Repo(module_repo_path)
-    if repo.is_dirty():
+    if repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=True):
         print('Failed to checkin module {}. module repo is dirty:\n{}'.format(module, module_repo_path))
         print(repo.git.status())
         return
