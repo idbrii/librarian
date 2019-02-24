@@ -373,8 +373,13 @@ def _get_project_dir(project):
     """
     working_dir = os.getcwd()
     if working_dir.find(project) < 0:
-        print("Current path ({}) doesn't contain name of project '{}'.".format(working_dir, args.project))
-        answer = input("Are you in the right place? ")
+        print("Current path ({}) doesn't contain name of project '{}'.".format(working_dir, project))
+        try:
+            answer = input("Are you in the right place? ")
+        except EOFError:
+            print("n")
+            print("(Failed to read stdin. Assuming no.)")
+            answer = 'n'
         if answer.lower()[0] != 'y':
             sys.exit(-1)
     return working_dir
