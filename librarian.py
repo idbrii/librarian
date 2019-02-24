@@ -300,8 +300,6 @@ def main():
 
             section['KIND'] = args.kind
             section['CLONE'] = clone_path
-            print('Cloning "{}" module "{}" into Library...'.format(args.kind, args.module))
-            origin = repo.create_remote('origin', args.clone_url)
 
         except configparser.DuplicateSectionError:
             section = config[args.module]
@@ -312,13 +310,18 @@ def main():
                        section['KIND'],
                        section['CLONE']))
 
-        origin = repo.remotes.origin
+        try:
+            origin = repo.remotes.origin
+        except AttributeError:
+            print('Cloning "{}" module "{}" into Library...'.format(args.kind, args.module))
+            origin = repo.create_remote('origin', args.clone_url)
+
         assert(origin.exists())
         print('Updating module "{}" to latest...'.format(args.module))
         origin.fetch()
         master = repo.create_head('master', origin.refs.master).set_tracking_branch(origin.refs.master)
         master.checkout()
-        print(master.commit.message)
+        print('\tCommit: {}\n\tMessage: "{}"'.format(master.commit.hexsha, master.commit.message.strip()))
 
     elif args.action == 'add':
         # librarian add puppypark windfield
