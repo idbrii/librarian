@@ -142,7 +142,7 @@ def _rename_if_single_file(path, new_name, include_re):
         return
 
 
-def add_module(module, kind, module_path, target_repo_path, target_path, cfg):
+def add_module(project, module, kind, module_path, target_repo_path, target_path, cfg):
     target_repo = git.Repo(target_repo_path)
     if target_repo.is_dirty():
         print('Failed to add module {}. Target repo is dirty:\n{}'.format(module, target_repo_path))
@@ -153,7 +153,8 @@ def add_module(module, kind, module_path, target_repo_path, target_path, cfg):
     print('Copying {0} module "{1}" into {2}'.format(kind, module, dst))
     src_repo = git.Repo(module_path)
     master = src_repo.remotes.origin.refs.master
-    branch = src_repo.create_head(module, master).set_tracking_branch(master)
+    branch = src_repo.create_head(project, master).set_tracking_branch(master)
+    print('Created branch "{}" in library for module "{}".'.format(project, module))
 
     include_re = None
     exclude_re = None
@@ -177,6 +178,76 @@ def add_module(module, kind, module_path, target_repo_path, target_path, cfg):
     single = cfg['RENAME_ROOT_MARKER_PATTERN']
     if single:
         _rename_if_single_file(target_path, root_marker, re.compile(single))
+
+
+def sync_module(project, module, module_repo_path, src_path, cfg):
+    repo = git.Repo(module_repo_path)
+    if repo.is_dirty():
+        print('Failed to sync module {}. module repo is dirty:\n{}'.format(module, module_repo_path))
+        print(repo.git.status())
+        return
+
+    dst = src_path.replace(os.path.expanduser('~'), '~', 1)
+    try:
+        repo.heads[project].checkout()
+    except IndexError:
+        print("ERROR: Branch '{}' doesn't exist in library for module '{}'. Have you run `librarian add {} {}`?".format(project, module, project, module))
+        sys.exit(-1)
+
+    print('Copying module "{}" from {}'.format(module, dst))
+
+    include_re = None
+    exclude_re = None
+    if len(cfg['INCLUDE_PATTERN']) > 0:
+        include_re = re.compile(cfg['INCLUDE_PATTERN'])
+    if len(cfg['EXCLUDE_PATTERN']) > 0:
+        exclude_re = re.compile(cfg['EXCLUDE_PATTERN'])
+
+    if include_re is None and exclude_re is None:
+        def should_include(f):
+            return f != '.git'
+    else:
+        def should_include(f):
+            return (f != '.git'
+                    and (include_re is None or include_re.match(f))
+                    and (exclude_re is None or exclude_re.match(f) is None))
+
+    root_marker = cfg['ROOT_MARKER']
+    dst_path = _find_src_module_path(module_repo_path, root_marker, should_include)
+
+    restore_git = None
+    if dst_path == module_repo_path:
+        # If we're operating on the top-level, then we need to save our .git
+        # folder!
+        dot_git = os.path.join(dst_path, '.git')
+        temp_git = os.path.join(dst_path, '..', '.git')
+        shutil.move(dot_git, temp_git)
+        def restore_git():
+            shutil.move(temp_git, dot_git)
+
+    _copy_and_overwrite(src_path, dst_path, should_include)
+    single = cfg['RENAME_ROOT_MARKER_PATTERN']
+    if single:
+        _rename_if_single_file(dst_path, single.replace('.*', module), re.compile(single))
+    if restore_git:
+        restore_git()
+
+
+def _get_project_dir(project):
+    """Get the current project's directory.
+
+    It's just the current working directory, but we do some validation to
+    ensure you're not running from the wrong location.
+
+    _get_project_dir() -> str
+    """
+    working_dir = os.getcwd()
+    if working_dir.find(project) < 0:
+        print("Current path ({}) doesn't contain name of project '{}'.".format(working_dir, args.project))
+        answer = input("Are you in the right place? ")
+        if answer.lower()[0] != 'y':
+            sys.exit(-1)
+    return working_dir
 
 
 def main():
@@ -252,16 +323,12 @@ def main():
     elif args.action == 'add':
         # librarian add puppypark windfield
         clone_path = config[args.module]['CLONE']
-        working_dir = os.getcwd()
-        if working_dir.find(args.project) < 0:
-            print("Current path ({}) doesn't contain name of project '{}'.".format(working_dir, args.project))
-            answer = input("Are you in the right place? ")
-            if answer.lower()[0] != 'y':
-                sys.exit(-1)
+        working_dir = _get_project_dir(args.project)
 
         kind = config[args.module]['KIND']
         target_path = os.path.join(working_dir, config[kind]['LIB_PATH'], args.module)
-        add_module(args.module,
+        add_module(args.project,
+                   args.module,
                    config[args.module]['KIND'],
                    config[args.module]['CLONE'],
                    working_dir,
@@ -270,15 +337,15 @@ def main():
 
     elif args.action == 'sync':
         # librarian sync puppypark windfield
-        clone_path = config[args.module]['CLONE']
-        repo = git.Repo(clone_path)
-        if repo.is_dirty():
-            print('Failed to copy changes from project {}. Target repo is dirty:\n{}'.format(args.project, clone_path))
-            print(repo.git.status())
-            return
-        print('Copying changes from project "{}" into module "{}"...'.format(args.project, args.module))
-        repo.heads[args.module].checkout()
-        print("TODO: copy files")
+        kind = config[args.module]['KIND']
+        working_dir = _get_project_dir(args.project)
+        target_path = os.path.join(working_dir, config[kind]['LIB_PATH'], args.module)
+        sync_module(args.project,
+                    args.module,
+                    config[args.module]['CLONE'],
+                    target_path,
+                    config[kind])
+
 
     _write_config(config)
 
