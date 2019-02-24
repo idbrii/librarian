@@ -209,6 +209,25 @@ def _rename_if_single_file(path, new_name, include_re):
         return
 
 
+def _build_should_include(cfg):
+    include_re = None
+    exclude_re = None
+    if len(cfg['INCLUDE_PATTERN']) > 0:
+        include_re = re.compile(cfg['INCLUDE_PATTERN'])
+    if len(cfg['EXCLUDE_PATTERN']) > 0:
+        exclude_re = re.compile(cfg['EXCLUDE_PATTERN'])
+
+    if include_re is None and exclude_re is None:
+        def should_include(f):
+            return f != '.git'
+    else:
+        def should_include(f):
+            return (f != '.git'
+                    and (include_re is None or include_re.match(f))
+                    and (exclude_re is None or exclude_re.match(f) is None))
+    return include_re, exclude_re, should_include
+
+
 def _checkout_module(args, config):
     # librarian checkout puppypark windfield
     target_repo_path = _get_project_dir(args.project)
@@ -232,21 +251,7 @@ def _checkout_module(args, config):
     branch = src_repo.create_head(project, master).set_tracking_branch(master)
     print('Created branch "{}" in library for module "{}".'.format(project, module))
 
-    include_re = None
-    exclude_re = None
-    if len(cfg['INCLUDE_PATTERN']) > 0:
-        include_re = re.compile(cfg['INCLUDE_PATTERN'])
-    if len(cfg['EXCLUDE_PATTERN']) > 0:
-        exclude_re = re.compile(cfg['EXCLUDE_PATTERN'])
-
-    if include_re is None and exclude_re is None:
-        def should_include(f):
-            return f != '.git'
-    else:
-        def should_include(f):
-            return (f != '.git'
-                    and (include_re is None or include_re.match(f))
-                    and (exclude_re is None or exclude_re.match(f) is None))
+    include_re,exclude_re,should_include = _build_should_include(cfg)
 
     root_marker = cfg['ROOT_MARKER']
     module_path = _find_src_module_path(module_path, root_marker, should_include)
@@ -281,21 +286,7 @@ def _checkin_module(args, config):
 
     print('Copying module "{}" from {}'.format(module, dst))
 
-    include_re = None
-    exclude_re = None
-    if len(cfg['INCLUDE_PATTERN']) > 0:
-        include_re = re.compile(cfg['INCLUDE_PATTERN'])
-    if len(cfg['EXCLUDE_PATTERN']) > 0:
-        exclude_re = re.compile(cfg['EXCLUDE_PATTERN'])
-
-    if include_re is None and exclude_re is None:
-        def should_include(f):
-            return f != '.git'
-    else:
-        def should_include(f):
-            return (f != '.git'
-                    and (include_re is None or include_re.match(f))
-                    and (exclude_re is None or exclude_re.match(f) is None))
+    include_re,exclude_re,should_include = _build_should_include(cfg)
 
     root_marker = cfg['ROOT_MARKER']
     dst_path = _find_src_module_path(module_repo_path, root_marker, should_include)
