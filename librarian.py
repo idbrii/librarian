@@ -201,12 +201,12 @@ def _rename_if_single_file(path, new_name, include_re):
         if include_re:
             files = [f for f in files if include_re.match(f)]
         if not dirs and len(files) == 1:
-            f = files[0]
-            src = os.path.join(dirpath, f)
+            file = files[0]
+            src = os.path.join(dirpath, file)
             dst = os.path.join(dirpath, new_name)
             shutil.move(src, dst)
         # either way, return. We don't need to go deeper.
-        return
+        return file
 
 
 def _build_should_include(cfg):
@@ -258,7 +258,9 @@ def _checkout_module(args, config):
     _copy_and_overwrite(module_path, target_path, should_include)
     single = cfg['RENAME_ROOT_MARKER_PATTERN']
     if single:
-        _rename_if_single_file(target_path, root_marker, re.compile(single))
+        renamed = _rename_if_single_file(target_path, root_marker, re.compile(single))
+        if renamed:
+            config[module]['RENAMED_ROOT_MARKER'] = renamed
 
 
 def _checkin_module(args, config):
@@ -304,7 +306,9 @@ def _checkin_module(args, config):
     _copy_and_overwrite(src_path, dst_path, should_include)
     single = cfg['RENAME_ROOT_MARKER_PATTERN']
     if single:
-        _rename_if_single_file(dst_path, single.replace('.*', module), re.compile(single))
+        file = config[module].get('RENAMED_ROOT_MARKER', '')
+        if file:
+            _rename_if_single_file(dst_path, file, re.compile(cfg['ROOT_MARKER']))
     if restore_git:
         restore_git()
 
