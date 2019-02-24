@@ -256,7 +256,16 @@ def _add_module(args, config):
         _rename_if_single_file(target_path, root_marker, re.compile(single))
 
 
-def sync_module(project, module, module_repo_path, src_path, cfg):
+def _sync_module(args, config):
+    # librarian sync puppypark windfield
+    kind             = config[args.module]['KIND']
+    working_dir      = _get_project_dir(args.project)
+    src_path         = os.path.join(working_dir, config[kind]['LIB_PATH'], args.module)
+    project          = args.project
+    module           = args.module
+    module_repo_path = config[args.module]['CLONE']
+    cfg              = config[kind]
+
     repo = git.Repo(module_repo_path)
     if repo.is_dirty():
         print('Failed to sync module {}. module repo is dirty:\n{}'.format(module, module_repo_path))
@@ -343,16 +352,7 @@ def main():
         _add_module(args, config)
 
     elif args.action == 'sync':
-        # librarian sync puppypark windfield
-        kind = config[args.module]['KIND']
-        working_dir = _get_project_dir(args.project)
-        target_path = os.path.join(working_dir, config[kind]['LIB_PATH'], args.module)
-        sync_module(args.project,
-                    args.module,
-                    config[args.module]['CLONE'],
-                    target_path,
-                    config[kind])
-
+        _sync_module(args, config)
 
     _write_config(config)
 
