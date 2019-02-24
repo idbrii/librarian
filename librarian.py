@@ -236,11 +236,15 @@ def _build_should_include(cfg):
 
 def _checkout_module(args, config):
     # librarian checkout puppypark windfield
-    target_repo_path = _get_project_dir(args.project)
-    kind             = config[args.module]['kind']
-    target_path      = os.path.join(target_repo_path, config[kind]['lib_path'], args.module)
     project          = args.project
     module           = args.module
+    try:
+        kind         = config[args.module]['kind']
+    except KeyError:
+        print("ERROR: Module '{0}' doesn't exist in library. Have you run `librarian acquire blah {0} https://blah/{0}`?".format(module))
+        sys.exit(-1)
+    target_repo_path = _get_project_dir(args.project)
+    target_path      = os.path.join(target_repo_path, config[kind]['lib_path'], args.module)
     module_path      = config[args.module]['clone']
     cfg              = config[kind]
     target_repo      = git.Repo(target_repo_path)
@@ -285,11 +289,16 @@ def _checkout_module(args, config):
 
 def _checkin_module(args, config):
     # librarian checkin puppypark windfield
-    kind             = config[args.module]['kind']
+    module           = args.module
+    project          = args.project
+    try:
+        kind         = config[args.module]['kind']
+    except KeyError:
+        print("ERROR: Module '{0}' doesn't exist in library. Have you run `librarian acquire blah {0} https://blah/{0}`?".format(module))
+        sys.exit(-1)
+
     working_dir      = _get_project_dir(args.project)
     src_path         = os.path.join(working_dir, config[kind]['lib_path'], args.module)
-    project          = args.project
-    module           = args.module
     module_repo_path = config[args.module]['clone']
     cfg              = config[kind]
 
