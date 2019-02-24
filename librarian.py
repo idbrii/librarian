@@ -108,21 +108,21 @@ exclude-pattern: {} -> {}
 root-marker: {} -> {}
 rename-single-file-root-marker: {} -> {}
         '''.format(args.kind,
-                   section.get('LIB_PATH', '<none>'), args.path,
-                   section.get('INCLUDE_PATTERN', '<none>'), args.include_pattern,
-                   section.get('EXCLUDE_PATTERN', '<none>'), args.exclude_pattern,
-                   section.get('ROOT_MARKER', '<none>'), args.root_marker,
-                   section.get('RENAME_ROOT_MARKER_PATTERN', '<none>'), args.rename_single_file_root_marker))
+                   section.get('lib_path', '<none>'), args.path,
+                   section.get('include_pattern', '<none>'), args.include_pattern,
+                   section.get('exclude_pattern', '<none>'), args.exclude_pattern,
+                   section.get('root_marker', '<none>'), args.root_marker,
+                   section.get('rename_root_marker_pattern', '<none>'), args.rename_single_file_root_marker))
     has_data = (len(args.path) > 0
         or len(args.include_pattern) > 0
         or len(args.exclude_pattern) > 0
         or len(args.root_marker) > 0)
     if has_data:
-        section['LIB_PATH'] = args.path
-        section['INCLUDE_PATTERN'] = args.include_pattern
-        section['EXCLUDE_PATTERN'] = args.exclude_pattern
-        section['ROOT_MARKER'] = args.root_marker
-        section['RENAME_ROOT_MARKER_PATTERN'] = str(args.rename_single_file_root_marker)
+        section['lib_path'] = args.path
+        section['include_pattern'] = args.include_pattern
+        section['exclude_pattern'] = args.exclude_pattern
+        section['root_marker'] = args.root_marker
+        section['rename_root_marker_pattern'] = str(args.rename_single_file_root_marker)
     else:
         # we just outputted the last data. Good enough for now.
         print('No config changes written.')
@@ -212,10 +212,10 @@ def _rename_if_single_file(path, new_name, include_re):
 def _build_should_include(cfg):
     include_re = None
     exclude_re = None
-    if len(cfg['INCLUDE_PATTERN']) > 0:
-        include_re = re.compile(cfg['INCLUDE_PATTERN'])
-    if len(cfg['EXCLUDE_PATTERN']) > 0:
-        exclude_re = re.compile(cfg['EXCLUDE_PATTERN'])
+    if len(cfg['include_pattern']) > 0:
+        include_re = re.compile(cfg['include_pattern'])
+    if len(cfg['exclude_pattern']) > 0:
+        exclude_re = re.compile(cfg['exclude_pattern'])
 
     if include_re is None and exclude_re is None:
         def should_include(f):
@@ -232,7 +232,7 @@ def _checkout_module(args, config):
     # librarian checkout puppypark windfield
     target_repo_path = _get_project_dir(args.project)
     kind             = config[args.module]['KIND']
-    target_path      = os.path.join(target_repo_path, config[kind]['LIB_PATH'], args.module)
+    target_path      = os.path.join(target_repo_path, config[kind]['lib_path'], args.module)
     project          = args.project
     module           = args.module
     module_path      = config[args.module]['CLONE']
@@ -253,21 +253,21 @@ def _checkout_module(args, config):
 
     include_re,exclude_re,should_include = _build_should_include(cfg)
 
-    root_marker = cfg['ROOT_MARKER']
+    root_marker = cfg['root_marker']
     module_path = _find_src_module_path(module_path, root_marker, should_include)
     _copy_and_overwrite(module_path, target_path, should_include)
-    single = cfg['RENAME_ROOT_MARKER_PATTERN']
+    single = cfg['rename_root_marker_pattern']
     if single:
         renamed = _rename_if_single_file(target_path, root_marker, re.compile(single))
         if renamed:
-            config[module]['RENAMED_ROOT_MARKER'] = renamed
+            config[module]['renamed_root_marker'] = renamed
 
 
 def _checkin_module(args, config):
     # librarian checkin puppypark windfield
     kind             = config[args.module]['KIND']
     working_dir      = _get_project_dir(args.project)
-    src_path         = os.path.join(working_dir, config[kind]['LIB_PATH'], args.module)
+    src_path         = os.path.join(working_dir, config[kind]['lib_path'], args.module)
     project          = args.project
     module           = args.module
     module_repo_path = config[args.module]['CLONE']
@@ -290,7 +290,7 @@ def _checkin_module(args, config):
 
     include_re,exclude_re,should_include = _build_should_include(cfg)
 
-    root_marker = cfg['ROOT_MARKER']
+    root_marker = cfg['root_marker']
     dst_path = _find_src_module_path(module_repo_path, root_marker, should_include)
 
     restore_git = None
@@ -304,11 +304,11 @@ def _checkin_module(args, config):
             shutil.move(temp_git, dot_git)
 
     _copy_and_overwrite(src_path, dst_path, should_include)
-    single = cfg['RENAME_ROOT_MARKER_PATTERN']
+    single = cfg['rename_root_marker_pattern']
     if single:
-        file = config[module].get('RENAMED_ROOT_MARKER', '')
+        file = config[module].get('renamed_root_marker', '')
         if file:
-            _rename_if_single_file(dst_path, file, re.compile(cfg['ROOT_MARKER']))
+            _rename_if_single_file(dst_path, file, re.compile(cfg['root_marker']))
     if restore_git:
         restore_git()
 
