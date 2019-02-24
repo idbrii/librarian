@@ -26,9 +26,9 @@ def _get_args():
     """Program arguments
 
     librarian config love --path src/lib/ --root-marker init.lua --rename-single-file-root-marker ".*.lua" --include-pattern ".*.lua|LICENSE.*"
-    librarian archive love windfield https://github.com/adnzzzzZ/windfield.git
-    librarian add puppypark windfield
-    librarian sync puppypark windfield
+    librarian acquire love windfield https://github.com/adnzzzzZ/windfield.git
+    librarian checkout puppypark windfield
+    librarian checkin puppypark windfield
 
     _get_args() -> Namespace
     """
@@ -36,49 +36,49 @@ def _get_args():
     subparsers = parser.add_subparsers(dest='action',
                                        help='Deploy and track changes to modules in your projects.')
 
-    archive = subparsers.add_parser('config',
+    acquire = subparsers.add_parser('config',
                                     help='Configure a project kind: a category of projects that define how their managed.')
-    archive.add_argument('kind',
+    acquire.add_argument('kind',
                          help='The category of module (what kind of project will it be used in).')
-    archive.add_argument('--path',
+    acquire.add_argument('--path',
                          default='',
                          help='The path from the project repo root where modules are added. ex: src/lib/')
-    archive.add_argument('--include-pattern',
+    acquire.add_argument('--include-pattern',
                          default='',
                          help='Regular expression of files to include when copying to project. If not provided, all files are included.')
-    archive.add_argument('--exclude-pattern',
+    acquire.add_argument('--exclude-pattern',
                          default='',
                          help='Regular expression of files to exclude when copying to project. If not provided, all files are included.')
-    archive.add_argument('--root-marker',
+    acquire.add_argument('--root-marker',
                          default='',
                          help='A file that indicates the root of the module (may not be the root of the repo). Useful to ignore tests and example code in well-organized repos.')
-    archive.add_argument('--rename-single-file-root-marker',
+    acquire.add_argument('--rename-single-file-root-marker',
                          default='',
                          help='If there is no root marker but there is a single file matching this regex, then rename it to the root marker.')
 
-    archive = subparsers.add_parser('archive',
-                                    help='Add a module to the Library.')
-    archive.add_argument('kind',
+    acquire = subparsers.add_parser('acquire',
+                                    help='Add a module to the Library to later checkout into a project.')
+    acquire.add_argument('kind',
                          help='The category of module (what kind of project will it be used in).')
-    archive.add_argument('module',
-                         help='Add a module to your project.')
-    archive.add_argument('clone_url',
+    acquire.add_argument('module',
+                         help='The module to begin tracking in the Library.')
+    acquire.add_argument('clone_url',
                          metavar='clone-url',
                          help='The git origin URL to clone from.')
 
-    add = subparsers.add_parser('add',
-                                help='Add a module to your project.')
-    add.add_argument('project',
+    checkout = subparsers.add_parser('checkout',
+                                help='Export a module into your project.')
+    checkout.add_argument('project',
                      help='The project to use.')
-    add.add_argument('module',
-                     help='The module to operate on.')
+    checkout.add_argument('module',
+                     help='The module to copy into your project.')
 
-    sync = subparsers.add_parser('sync',
-                                 help='Copy changes to a module from your project to the Library.')
-    sync.add_argument('project',
+    checkin = subparsers.add_parser('checkin',
+                                 help='Copy changes to a module from your project back to the Library.')
+    checkin.add_argument('project',
                       help='The project to use.')
-    sync.add_argument('module',
-                      help='The module to operate on.')
+    checkin.add_argument('module',
+                      help='The module to copy from your project to the Library.')
 
     return parser.parse_args()
 
@@ -127,8 +127,8 @@ rename-single-file-root-marker: {} -> {}
         # we just outputted the last data. Good enough for now.
         print('No config changes written.')
 
-def _archive_module(args, config):
-    # librarian archive love windfield https://github.com/adnzzzzZ/windfield.git
+def _acquire_module(args, config):
+    # librarian acquire love windfield https://github.com/adnzzzzZ/windfield.git
     clone_path = os.path.join(CLONES_PATH, args.module)
     repo = git.Repo.init(clone_path)
     try:
@@ -209,8 +209,8 @@ def _rename_if_single_file(path, new_name, include_re):
         return
 
 
-def _add_module(args, config):
-    # librarian add puppypark windfield
+def _checkout_module(args, config):
+    # librarian checkout puppypark windfield
     target_repo_path = _get_project_dir(args.project)
     kind             = config[args.module]['KIND']
     target_path      = os.path.join(target_repo_path, config[kind]['LIB_PATH'], args.module)
@@ -221,7 +221,7 @@ def _add_module(args, config):
     target_repo      = git.Repo(target_repo_path)
 
     if target_repo.is_dirty():
-        print('Failed to add module {}. Target repo is dirty:\n{}'.format(module, target_repo_path))
+        print('Failed to checkout module {}. Target repo is dirty:\n{}'.format(module, target_repo_path))
         print(target_repo.git.status())
         return
 
@@ -256,8 +256,8 @@ def _add_module(args, config):
         _rename_if_single_file(target_path, root_marker, re.compile(single))
 
 
-def _sync_module(args, config):
-    # librarian sync puppypark windfield
+def _checkin_module(args, config):
+    # librarian checkin puppypark windfield
     kind             = config[args.module]['KIND']
     working_dir      = _get_project_dir(args.project)
     src_path         = os.path.join(working_dir, config[kind]['LIB_PATH'], args.module)
@@ -268,7 +268,7 @@ def _sync_module(args, config):
 
     repo = git.Repo(module_repo_path)
     if repo.is_dirty():
-        print('Failed to sync module {}. module repo is dirty:\n{}'.format(module, module_repo_path))
+        print('Failed to checkin module {}. module repo is dirty:\n{}'.format(module, module_repo_path))
         print(repo.git.status())
         return
 
@@ -276,7 +276,7 @@ def _sync_module(args, config):
     try:
         repo.heads[project].checkout()
     except IndexError:
-        print("ERROR: Branch '{}' doesn't exist in library for module '{}'. Have you run `librarian add {} {}`?".format(project, module, project, module))
+        print("ERROR: Branch '{}' doesn't exist in library for module '{}'. Have you run `librarian checkout {} {}`?".format(project, module, project, module))
         sys.exit(-1)
 
     print('Copying module "{}" from {}'.format(module, dst))
@@ -345,14 +345,14 @@ def main():
     if   args.action == 'config':
         _apply_config(args, config)
 
-    elif args.action == 'archive':
-        _archive_module(args, config)
+    elif args.action == 'acquire':
+        _acquire_module(args, config)
 
-    elif args.action == 'add':
-        _add_module(args, config)
+    elif args.action == 'checkout':
+        _checkout_module(args, config)
 
-    elif args.action == 'sync':
-        _sync_module(args, config)
+    elif args.action == 'checkin':
+        _checkin_module(args, config)
 
     _write_config(config)
 
