@@ -190,6 +190,9 @@ def _find_src_module_path(path, root_marker, should_include_fn):
 
 def _copy_and_overwrite(from_path, to_path, should_include_fn):
     print('Copying {} to {}'.format(from_path, to_path))
+    if not os.path.exists(from_path):
+        raise FileNotFoundError('No such file or directory: '+ from_path)
+
     if os.path.exists(to_path):
         shutil.rmtree(to_path)
     def ignore(dir_path, items):
@@ -332,7 +335,12 @@ def _checkin_module(args, config):
         def restore_git():
             shutil.move(temp_git, dot_git)
 
-    _copy_and_overwrite(src_path, dst_path, should_include)
+    try:
+        _copy_and_overwrite(src_path, dst_path, should_include)
+    except FileNotFoundError:
+        print("ERROR: Module '{1}' cannot be found in project '{0}'. Have you run `librarian checkout {0} {1}`?".format(project, module))
+        sys.exit(-1)
+
     single = cfg['rename_root_marker_pattern']
     if single:
         file = config[module].get('renamed_root_marker', '')
