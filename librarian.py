@@ -101,21 +101,22 @@ def _apply_config(args, config):
     try:
         config.add_section(args.kind)
         section = config[args.kind]
-        print("Added new kind '{}'.".format(args.kind))
+        print("Added new kind '{}':".format(args.kind))
     except configparser.DuplicateSectionError:
         section = config[args.kind]
-        print('''Kind '{}' already registered:
-path: {} -> {}
+        print("Kind '{}' already registered:".format(args.kind))
+
+    changes = '''path: {} -> {}
 include-pattern: {} -> {}
 exclude-pattern: {} -> {}
 root-marker: {} -> {}
 rename-single-file-root-marker: {} -> {}
-        '''.format(args.kind,
+        '''.format(
                    section.get('lib_path', '<none>'), args.path,
                    section.get('include_pattern', '<none>'), args.include_pattern,
                    section.get('exclude_pattern', '<none>'), args.exclude_pattern,
                    section.get('root_marker', '<none>'), args.root_marker,
-                   section.get('rename_root_marker_pattern', '<none>'), args.rename_single_file_root_marker))
+                   section.get('rename_root_marker_pattern', '<none>'), args.rename_single_file_root_marker)
     has_data = (len(args.path) > 0
         or len(args.include_pattern) > 0
         or len(args.exclude_pattern) > 0
@@ -128,7 +129,9 @@ rename-single-file-root-marker: {} -> {}
         section['rename_root_marker_pattern'] = str(args.rename_single_file_root_marker)
     else:
         # we just outputted the last data. Good enough for now.
-        print('No config changes written.')
+        print('(No config changes written.)')
+        changes = changes.replace('->', '')
+    print(changes)
 
 def _acquire_module(args, config):
     # librarian acquire love windfield https://github.com/adnzzzzZ/windfield.git
