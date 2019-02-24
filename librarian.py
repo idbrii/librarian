@@ -271,7 +271,7 @@ def _checkout_module(args, config):
         action = 'Updated' if is_update else 'Added'
         msg = '''Librarian: {1} module {0}
         
-{0} retrieved from {2}
+{0} is from {2}.
 \t{0}@{3}
 \tMessage: "{4}"'''.format(module, action, config[args.module]['URL'], branch.commit.hexsha, branch.commit.message.strip())
         target_repo.index.commit(msg)
@@ -328,6 +328,19 @@ def _checkin_module(args, config):
             _rename_if_single_file(dst_path, file, re.compile(cfg['root_marker']))
     if restore_git:
         restore_git()
+
+    if repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=True):
+        project_repo = git.Repo(working_dir)
+        repo.git.add(A=True)
+        msg = '''Librarian: Update with {0}'s latest
+
+\t{0}@{1}
+\tMessage: "{2}"'''.format(project, project_repo.head.commit.hexsha, project_repo.head.commit.message.strip())
+        repo.index.commit(msg)
+        print('Commit complete:\n'+ msg)
+    else:
+        print('No changes to apply')
+
 
 
 def _get_project_dir(project):
