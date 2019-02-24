@@ -415,9 +415,6 @@ def _get_project_dir(project):
 
 
 def main():
-    # HACK
-    os.chdir(os.path.expanduser('~/data/code/game/puppypark/'))
-
     os.makedirs(CLONES_PATH, exist_ok=True)
     config = _read_config()
     args = _get_args()
