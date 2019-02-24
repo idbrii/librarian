@@ -164,7 +164,7 @@ url: {}
     origin.fetch()
     master = repo.create_head('master', origin.refs.master).set_tracking_branch(origin.refs.master)
     master.checkout()
-    print('\tCommit: {}\n\tMessage: "{}"'.format(master.commit.hexsha, master.commit.message.strip()))
+    print('\tCommit: {}\n\tMessage:\n{}'.format(master.commit.hexsha, master.commit.message.strip()))
 
 
 def _find_src_module_path(path, root_marker, should_include_fn):
@@ -276,7 +276,7 @@ def _checkout_module(args, config):
         
 {0} is from {2}.
 \t{0}@{3}
-\tMessage: "{4}"'''.format(module, action, config[args.module]['url'], branch.commit.hexsha, branch.commit.message.strip())
+\tMessage:\n{4}'''.format(module, action, config[args.module]['url'], branch.commit.hexsha, branch.commit.message.strip())
         target_repo.index.commit(msg)
         print('Commit complete:\n'+ msg)
     else:
@@ -338,7 +338,7 @@ def _checkin_module(args, config):
         msg = '''Librarian: Update with {0}'s latest
 
 \t{0}@{1}
-\tMessage: "{2}"'''.format(project, project_repo.head.commit.hexsha, project_repo.head.commit.message.strip())
+\tMessage:\n{2}'''.format(project, project_repo.head.commit.hexsha, project_repo.head.commit.message.strip())
         repo.index.commit(msg)
         print('Commit complete:\n'+ msg)
     else:
