@@ -3,6 +3,9 @@
 # Requires gitpython
 #   pip3 install gitpython
 
+# TODO:
+# * Require .files to match include pattern.
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -48,7 +51,7 @@ Example:
 Create a 'love' config in librarian for lua projects that renames single
 file libraries so they exist in a folder, but can still be imported by
 name:
-    librarian config love --path src/lib/ --root-marker init.lua --rename-single-file-root-marker ".*.lua" --include-pattern ".*.lua|LICENSE.*"
+    librarian config love --path src/lib/ --root-marker init.lua --rename-single-file-root-marker ".*.lua" --include-pattern ".*.lua|LICENSE.*" --exclude-pattern "main.lua"
 
 Register a 'love' module 'windfield':
     librarian acquire love windfield https://github.com/adnzzzzZ/windfield.git
