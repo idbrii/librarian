@@ -166,6 +166,11 @@ def _acquire_module(args, config):
     # librarian acquire love windfield https://github.com/adnzzzzZ/windfield.git
     clone_path = os.path.join(CLONES_PATH, args.module)
     repo = git.Repo.init(clone_path)
+    if repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=True):
+        print('Failed to checkout module {}. Target repo is dirty:\n{}'.format(args.module, clone_path))
+        print(target_repo.git.status())
+        return
+
     try:
         config.add_section(args.module)
         section = config[args.module]
@@ -203,8 +208,8 @@ url: {}
         master = repo.create_head('master', origin.refs.master)
     master.set_tracking_branch(origin.refs.master)
 
-    master.checkout()
-    print('\tCommit: {}\n\tMessage:\n{}'.format(master.commit.hexsha, master.commit.message.strip()))
+    master.checkout(force=True)
+    print('\tCommit: {}\n\tMessage:\n{}\n'.format(master.commit.hexsha, master.commit.message.strip()))
 
 
 def _find_src_module_path(path, root_marker, should_include_fn):
