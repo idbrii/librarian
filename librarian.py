@@ -191,7 +191,15 @@ url: {}
     assert(origin.exists())
     print('Updating module "{}" to latest...'.format(args.module))
     origin.fetch()
-    master = repo.create_head('master', origin.refs.master).set_tracking_branch(origin.refs.master)
+    try:
+        # Already exists
+        master = repo.branches.master
+        master.set_reference(origin.refs.master.commit)
+    except AttributeError:
+        # New branch
+        master = repo.create_head('master', origin.refs.master)
+    master.set_tracking_branch(origin.refs.master)
+
     master.checkout()
     print('\tCommit: {}\n\tMessage:\n{}'.format(master.commit.hexsha, master.commit.message.strip()))
 
@@ -290,7 +298,13 @@ def _checkout_module(args, config):
     print('Copying {0} module "{1}" into {2}'.format(kind, module, dst))
     src_repo = git.Repo(module_path)
     master = src_repo.remotes.origin.refs.master
-    branch = src_repo.create_head(project, master).set_tracking_branch(master)
+    try:
+        branch = src_repo.heads[project]
+        # Update existing
+        branch.set_reference(master.commit)
+    except AttributeError:
+        # New branch
+        branch = src_repo.create_head(project, master).set_tracking_branch(master)
     print('Created branch "{}" in library for module "{}".'.format(project, module))
 
     include_re,exclude_re,should_include = _build_should_include(cfg)
