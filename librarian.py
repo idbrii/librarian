@@ -310,7 +310,7 @@ def _checkout_module(args, config):
         branch = src_repo.heads[project]
         # Update existing
         branch.set_reference(master.commit)
-    except AttributeError:
+    except IndexError:
         # New branch
         branch = src_repo.create_head(project, master).set_tracking_branch(master)
     print('Created branch "{}" in library for module "{}".'.format(project, module))
