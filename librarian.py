@@ -245,7 +245,7 @@ def _rename_if_single_file(path, new_name, include_re):
     file = None
     for dirpath,dirs,files in os.walk(path, topdown=True):
         if include_re:
-            files = [f for f in files if include_re.match(f)]
+            files = [f for f in files if include_re.fullmatch(f)]
         if not dirs and len(files) == 1:
             file = files[0]
             src = os.path.join(dirpath, file)
@@ -269,8 +269,8 @@ def _build_should_include(cfg):
     else:
         def should_include(f):
             return (f != '.git'
-                    and (include_re is None or include_re.match(f))
-                    and (exclude_re is None or exclude_re.match(f) is None))
+                    and (include_re is None or include_re.fullmatch(f))
+                    and (exclude_re is None or exclude_re.fullmatch(f) is None))
     return include_re, exclude_re, should_include
 
 
