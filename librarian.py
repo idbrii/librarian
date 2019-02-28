@@ -3,9 +3,6 @@
 # Requires gitpython
 #   pip3 install gitpython
 
-# TODO:
-# * Require .files to match include pattern.
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -223,8 +220,8 @@ def _find_src_module_path(path, root_marker, should_include_fn):
         if markers:
             return markers[0]
         if not first_includeable:
-            first_includeable = [dirpath for f in files if should_include_fn(f)]
-        dirs[:] = [d for d in dirs if should_include_fn(d)]
+            first_includeable = [dirpath for f in files if should_include_fn(dirpath, f)]
+        dirs[:] = [d for d in dirs if should_include_fn(dirpath, d)]
 
     # no marker found
     if first_includeable:
@@ -242,7 +239,7 @@ def _copy_and_overwrite(from_path, to_path, should_include_fn):
     if os.path.exists(to_path):
         shutil.rmtree(to_path)
     def ignore(dir_path, items):
-        return [f for f in items if not should_include_fn(f)]
+        return [f for f in items if not should_include_fn(dir_path, f)]
     shutil.copytree(from_path, to_path, ignore=ignore)
 
 
@@ -273,12 +270,12 @@ def _build_should_include(cfg):
         exclude_re = re.compile(cfg['exclude_pattern'])
 
     if include_re is None and exclude_re is None:
-        def should_include(f):
+        def should_include(dir_path, f):
             return f != '.git'
     else:
-        def should_include(f):
+        def should_include(dir_path, f):
             return (f != '.git'
-                    and (include_re is None or include_re.fullmatch(f))
+                    and (include_re is None or include_re.fullmatch(f) is not None or os.path.isdir(os.path.join(dir_path,f)))
                     and (exclude_re is None or exclude_re.fullmatch(f) is None))
     return include_re, exclude_re, should_include
 
