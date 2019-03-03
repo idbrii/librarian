@@ -238,9 +238,22 @@ def _copy_and_overwrite(from_path, to_path, should_include_fn):
 
     if os.path.exists(to_path):
         shutil.rmtree(to_path)
+
     def ignore(dir_path, items):
         return [f for f in items if not should_include_fn(dir_path, f)]
     shutil.copytree(from_path, to_path, ignore=ignore)
+    _remove_empty_directories(to_path)
+
+
+def _remove_empty_directories(root):
+    for dirpath,dirs,files in os.walk(root, topdown=False):
+        for directory in dirs:
+            path = os.path.join(dirpath, directory)
+            try:
+                os.rmdir(path)
+            except OSError as ex:
+                # Wasn't empty, couldn't delete.
+                pass
 
 
 def _rename_if_single_file(path, new_name, include_re):
