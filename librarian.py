@@ -48,7 +48,7 @@ Example:
 Create a 'love' config in librarian for lua projects that renames single
 file libraries so they exist in a folder, but can still be imported by
 name:
-    librarian config love --path src/lib/ --root-marker init.lua --rename-single-file-root-marker ".*.lua" --include-pattern ".*.lua|LICENSE.*" --exclude-pattern "main.lua|demo|example|test"
+    librarian config love --path src/lib/ --root-marker init.lua --rename-single-file-root-marker ".*.lua" --include-pattern ".*.lua|LICENSE.*|README.*" --exclude-pattern "main.lua|demos?|example.*|tests?|spec"
 
 Register a 'love' module 'windfield':
     librarian acquire love windfield https://github.com/adnzzzzZ/windfield.git
