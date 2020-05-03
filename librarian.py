@@ -317,6 +317,10 @@ def _checkout_module(args, config):
     print('Copying {0} module "{1}" into {2}'.format(kind, module, dst))
     src_repo = git.Repo(module_path)
     master = src_repo.remotes.origin.refs.master
+    if len(src_repo.remotes) > 1:
+        # TODO: Could we look at what master tracks instead of assuming origin?
+        print('Warning: Multiple remotes found, but we only look at origin.')
+
     try:
         branch = src_repo.heads[project]
         # Update existing
