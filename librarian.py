@@ -441,12 +441,14 @@ def _get_project_dir(project):
     if working_dir.find(project) < 0:
         print("Current path ({}) doesn't contain name of project '{}'.".format(working_dir, project))
         try:
-            answer = input("Are you in the right place? ")
+            answer = input("Are you in the right place? ").lower()
         except EOFError:
+            answer = None
+        if not answer:
             print("n")
             print("(Failed to read stdin. Assuming no.)")
             answer = 'n'
-        if answer.lower()[0] != 'y':
+        if answer[0] != 'y':
             sys.exit(-1)
     return working_dir
 
