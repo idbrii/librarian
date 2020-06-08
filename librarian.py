@@ -414,14 +414,15 @@ def _checkin_module(args, config):
     except FileNotFoundError:
         print("ERROR: Module '{1}' cannot be found in project '{0}'. Have you run `librarian checkout {0} {1}`?".format(project, module))
         sys.exit(-1)
+    finally:
+        if restore_git:
+            restore_git()
 
     single = cfg['rename_root_marker_pattern']
     if single:
         file = config[module].get('renamed_root_marker', '')
         if file:
             _rename_if_single_file(dst_path, file, re.compile(cfg['root_marker']))
-    if restore_git:
-        restore_git()
 
     if repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=True):
 
