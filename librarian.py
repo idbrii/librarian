@@ -274,6 +274,12 @@ def _rename_if_single_file(path, new_name, include_re):
         return file
 
 
+def _include_all(dirpath, f):
+    """Like the function returned by _build_should_include, but matches every
+    file.
+    """
+    return True
+
 def _build_should_include(cfg):
     include_re = None
     exclude_re = None
@@ -402,7 +408,9 @@ def _checkin_module(args, config):
             shutil.move(temp_git, dot_git)
 
     try:
-        _copy_and_overwrite(src_path, dst_path, should_include)
+        # Copy all files since project should only have included files unless
+        # we manually copied them (in which case we'd want them copied back).
+        _copy_and_overwrite(src_path, dst_path, _include_all)
     except FileNotFoundError:
         print("ERROR: Module '{1}' cannot be found in project '{0}'. Have you run `librarian checkout {0} {1}`?".format(project, module))
         sys.exit(-1)
@@ -416,6 +424,13 @@ def _checkin_module(args, config):
         restore_git()
 
     if repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=True):
+
+        # We deleted everything above. Restore any deleted files that
+        # weren't copied to the project.
+        for i in repo.index.diff(None):
+            if i.deleted_file and not should_include('', i.a_path):
+                repo.git.checkout('--', i.a_path)
+
         project_repo = git.Repo(working_dir)
         repo.git.add(A=True)
         msg = '''Librarian: Update with {0}'s latest
