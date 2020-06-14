@@ -89,8 +89,10 @@ Copy changes in project 'puppypark' from module 'windfield' back to the Library:
                                     help='Add a module to the Library to later checkout into a project.')
     acquire.add_argument('kind',
                          help='The category of module (what kind of project will it be used in).')
+
+    # TODO: Consider providing a deploy name option? So penlight is the name and pl is the destination folder.
     acquire.add_argument('module',
-                         help='The module to begin tracking in the Library.')
+                         help='The module to begin tracking in the Library. This name will be used to deploy the module in projects.')
     acquire.add_argument('clone_url',
                          metavar='clone-url',
                          help='The git origin URL to clone from.')
@@ -413,6 +415,7 @@ def _checkin_module(args, config):
         # we manually copied them (in which case we'd want them copied back).
         _copy_and_overwrite(src_path, dst_path, _include_all)
     except FileNotFoundError:
+        # TODO: Need clearer error here. How can I correct this if I cloned my project? Just run librarian anyway?
         print("ERROR: Module '{1}' cannot be found in project '{0}'. Have you run `librarian checkout {0} {1}`?".format(project, module))
         sys.exit(-1)
     finally:
