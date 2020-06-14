@@ -265,7 +265,8 @@ def _rename_if_single_file(path, new_name, include_re):
     for dirpath,dirs,files in os.walk(path, topdown=True):
         if include_re:
             files = [f for f in files if include_re.fullmatch(f)]
-        if not dirs and len(files) == 1:
+        has_relevant_dirs = any(['test' not in d and d != '.git' for d in dirs])
+        if not has_relevant_dirs and len(files) == 1:
             file = files[0]
             src = os.path.join(dirpath, file)
             dst = os.path.join(dirpath, new_name)
