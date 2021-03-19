@@ -173,6 +173,10 @@ def _get_remote_or_bail(repo, name):
             sys.exit(1)
 
 
+def _build_changelog(repo, before_sha, after_sha='HEAD'):
+    return repo.git.log(f"{before_sha}..{after_sha}", pretty='  * %s', first_parent=True, reverse=True)
+
+
 def _apply_config(args, config):
     try:
         config.add_section(args.kind)
@@ -311,7 +315,7 @@ def _pull_module(args, config):
     origin.pull(remote_master.remote_head)
 
     if before_sha != master.commit.hexsha:
-        changelog = src_repo.git.log(f"{before_sha}..HEAD", pretty='  * %s', first_parent=True, reverse=True)
+        changelog = _build_changelog(src_repo, before_sha)
         print('Changelog:')
         print(changelog)
         print('Latest:')
