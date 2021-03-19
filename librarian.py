@@ -61,6 +61,9 @@ Copy changes in project 'puppypark' from module 'windfield' back to the Library:
 
 Get updates to Library module 'windfield' from remote:
     librarian pull windfield
+
+List all 'love' modules:
+    librarian list --kind love
     """
     parser = argparse.ArgumentParser(prog='librarian',
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -99,6 +102,11 @@ Get updates to Library module 'windfield' from remote:
     acquire.add_argument('clone_url',
                          metavar='clone-url',
                          help='The git origin URL to clone from.')
+
+    ls = subparsers.add_parser('list',
+                                 help='List modules in your Library.')
+    ls.add_argument('--kind',
+                      help='The kind of modules to list. Without this argument, list modules of every kind.')
 
     pull = subparsers.add_parser('pull',
                                  help='Update your Library copy of a module.')
@@ -178,6 +186,7 @@ rename-single-file-root-marker: {} -> {}
         changes = changes.replace('->', '')
     print(changes)
 
+
 def _acquire_module(args, config):
     # librarian acquire love windfield https://github.com/adnzzzzZ/windfield.git
     clone_path = os.path.join(CLONES_PATH, args.module)
@@ -227,6 +236,28 @@ url: {}
 
     master.checkout(force=True)
     print('\tCommit: {}\n\tMessage:\n{}\n'.format(master.commit.hexsha, master.commit.message.strip()))
+
+
+def _list_module(args, config):
+    # librarian list --kind love
+    want_kind = args.kind
+    want_all = want_kind == None
+    count = 0
+    for c in config:
+        try:
+            kind = config[c]['kind']
+            if want_all or kind == want_kind:
+                url = config[c]['url']
+                print(f"{c:10}\t\t{kind} module from {url}")
+                count += 1
+        except KeyError as e:
+            # Entry for a kind, not a module.
+            pass
+
+    if want_kind:
+        print(f"Found {count} {want_kind} modules")
+    else:
+        print(f"Found {count} modules of any kind")
 
 
 def _pull_module(args, config):
@@ -553,6 +584,9 @@ def main():
     args = _get_args()
     if   args.action == 'config':
         _apply_config(args, config)
+
+    elif args.action == 'list':
+        _list_module(args, config)
 
     elif args.action == 'acquire':
         _acquire_module(args, config)
