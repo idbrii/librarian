@@ -436,6 +436,11 @@ def _checkin_module(args, config):
         if file:
             _rename_if_single_file(dst_path, file, re.compile(cfg['root_marker']))
 
+    # TODO: nothing has changed, but these all return true.
+    # print(repo.is_dirty(index=True))
+    # print(repo.is_dirty(working_tree=True))
+    # print(repo.is_dirty(untracked_files=True))
+    # print(repo.is_dirty(submodules=True))
     if repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=True):
 
         # We deleted everything above. Restore any deleted files that
