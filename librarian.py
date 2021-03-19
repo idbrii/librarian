@@ -440,14 +440,28 @@ def _checkout_module(args, config):
     src_repo = git.Repo(module_path)
     local_master = src_repo.refs.master
 
+    changelog = None
     try:
         branch = src_repo.heads[project]
+
         # Update existing
+        before_sha = branch.commit.hexsha
         branch.set_reference(local_master.commit)
+
+        if before_sha == branch.commit.hexsha:
+            print(f'Module "{module}" branch "{project}" is already at "{local_master}".')
+            changelog = f"Reverting to {local_master}. Message:\n\t"+ branch.commit.message.splitlines()[0].strip()
+        else:
+            changelog = "Changelog:\n" + _build_changelog(src_repo, before_sha, branch.commit.hexsha)
+            print(f'Updated branch "{project}" in library for module "{module}" to "{local_master}".')
     except IndexError:
         # New branch
         branch = src_repo.create_head(project, local_master).set_tracking_branch(local_master.tracking_branch())
-    print('Created branch "{}" in library for module "{}".'.format(project, module))
+        print('Created branch "{}" in library for module "{}".'.format(project, module))
+
+    if not changelog:
+        changelog = f"Latest message:\n\t"+ branch.commit.message.splitlines()[0].strip()
+
 
     include_re,exclude_re,should_include = _build_should_include(cfg)
 
@@ -467,8 +481,11 @@ def _checkout_module(args, config):
         msg = '''Librarian: {1} module {0}
         
 {0} is from {2}.
-\t{0}@{3}
-\tMessage:\n{4}'''.format(module, action, config[args.module]['url'], branch.commit.hexsha, branch.commit.message.strip())
+
+{4}
+
+Latest:
+\t{0}@{3}'''.format(module, action, config[args.module]['url'], branch.commit.hexsha, changelog)
         target_repo.index.commit(msg)
         print('Commit complete:\n'+ msg)
     else:
