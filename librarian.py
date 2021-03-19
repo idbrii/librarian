@@ -150,6 +150,29 @@ def _get_master_from_remote(remote):
         return remote.refs.main
 
 
+def _get_remote_or_bail(repo, name):
+    """Get remote by name.
+    name may be None.
+
+    _get_remote_or_bail(Repo, str) -> Remote
+    """
+    remote_name = name
+    if not remote_name:
+        # Default to origin since it's the convention.
+        remote_name = 'origin'
+    
+    try:
+        return repo.remote(remote_name)
+    except ValueError as e:
+        if not name and len(repo.remotes) == 1:
+            # Should be safe to use the only remote if it was renamed and user
+            # didn't ask for a specific name.
+            return repo.remotes[0]
+        else:
+            print('ERROR:', e)
+            sys.exit(1)
+
+
 def _apply_config(args, config):
     try:
         config.add_section(args.kind)
@@ -278,21 +301,10 @@ def _pull_module(args, config):
         print(src_repo.git.status())
         return
 
-    remote_name = args.remote
-    if not remote_name:
-        # Default to origin since it's the convention.
-        remote_name = 'origin'
-    
-    try:
-        origin = src_repo.remote(remote_name)
-    except ValueError as e:
-        if not args.remote and len(src_repo.remotes) == 1:
-            # Should be safe to use the only remote if it was renamed and user
-            # didn't ask for a specific name.
-            origin = src_repo.remotes[0]
-        else:
-            print('ERROR:', e)
-            sys.exit(1)
+    src_repo = git.Repo(module_path)
+    local_master = src_repo.refs.master
+
+    origin = _get_remote_or_bail(src_repo, args.remote)
 
     # All of our branches are named master -- even if remote uses main.
     remote_master = _get_master_from_remote(origin)
