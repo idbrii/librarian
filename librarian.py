@@ -160,7 +160,7 @@ def _get_remote_or_bail(repo, name):
     if not remote_name:
         # Default to origin since it's the convention.
         remote_name = 'origin'
-    
+
     try:
         return repo.remote(remote_name)
     except ValueError as e:
@@ -186,11 +186,11 @@ def _apply_config(args, config):
         section = config[args.kind]
         print("Kind '{}' already registered:".format(args.kind))
 
-    changes = '''path: {} -> {}
-include-pattern: {} -> {}
-exclude-pattern: {} -> {}
-root-marker: {} -> {}
-rename-single-file-root-marker: {} -> {}
+    changes = '''  path: {} -> {}
+  include-pattern: {} -> {}
+  exclude-pattern: {} -> {}
+  root-marker: {} -> {}
+  rename-single-file-root-marker: {} -> {}
         '''.format(
                    section.get('lib_path', '<none>'), args.path,
                    section.get('include_pattern', '<none>'), args.include_pattern,
@@ -234,9 +234,9 @@ def _acquire_module(args, config):
     except configparser.DuplicateSectionError:
         section = config[args.module]
         print('''Module '{}' already registered:
-kind: {}
-checkout: {}
-url: {}
+  kind: {}
+  checkout: {}
+  url: {}
         '''.format(args.module,
                    section['kind'],
                    section['clone'],
@@ -479,7 +479,7 @@ def _checkout_module(args, config):
         target_repo.git.add(A=True)
         action = 'Updated' if is_update else 'Added'
         msg = '''Librarian: {1} module {0}
-        
+
 {0} is from {2}.
 
 {4}
