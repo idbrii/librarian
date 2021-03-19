@@ -435,8 +435,7 @@ def _checkout_module(args, config):
         branch.set_reference(local_master.commit)
     except IndexError:
         # New branch
-        remote_master = _get_master_from_remote(src_repo.remotes.origin)
-        branch = src_repo.create_head(project, local_master).set_tracking_branch(remote_master)
+        branch = src_repo.create_head(project, local_master).set_tracking_branch(local_master.tracking_branch())
     print('Created branch "{}" in library for module "{}".'.format(project, module))
 
     include_re,exclude_re,should_include = _build_should_include(cfg)
