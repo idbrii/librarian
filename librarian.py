@@ -238,23 +238,18 @@ url: {}
                    section['clone'],
                    section['url']))
 
-    try:
-        origin = repo.remotes.origin
-    except AttributeError:
-        print('Cloning "{}" module "{}" into Library...'.format(args.kind, args.module))
-        origin = repo.create_remote('origin', args.clone_url)
+    if len(repo.remotes) > 0:
+        print(f'Module "{args.module}" already exists in Library.\nUse "librarian pull {args.module}" to update.')
+        return
+
+    print('Cloning "{}" module "{}" into Library...'.format(args.kind, args.module))
+    origin = repo.create_remote('origin', args.clone_url)
 
     assert(origin.exists())
-    print('Updating module "{}" to latest...'.format(args.module))
     origin.fetch()
     remote_master = _get_master_from_remote(origin)
-    try:
-        # Already exists
-        master = repo.branches.master
-        master.set_reference(remote_master.commit)
-    except AttributeError:
-        # New branch. All of our branches are named master -- even if remote uses main.
-        master = repo.create_head('master', remote_master)
+    # New branch. All of our branches are named master -- even if remote uses main.
+    master = repo.create_head('master', remote_master)
     master.set_tracking_branch(remote_master)
 
     master.checkout(force=True)
