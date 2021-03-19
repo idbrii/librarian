@@ -333,18 +333,16 @@ def _checkout_module(args, config):
     dst = target_path.replace(os.path.expanduser('~'), '~', 1)
     print('Copying {0} module "{1}" into {2}'.format(kind, module, dst))
     src_repo = git.Repo(module_path)
-    master = _get_master_from_remote(src_repo.remotes.origin)
-    if len(src_repo.remotes) > 1:
-        # TODO: Could we look at what master tracks instead of assuming origin?
-        print('Warning: Multiple remotes found, but we only look at origin.')
+    local_master = src_repo.refs.master
 
     try:
         branch = src_repo.heads[project]
         # Update existing
-        branch.set_reference(master.commit)
+        branch.set_reference(local_master.commit)
     except IndexError:
         # New branch
-        branch = src_repo.create_head(project, master).set_tracking_branch(master)
+        remote_master = _get_master_from_remote(src_repo.remotes.origin)
+        branch = src_repo.create_head(project, local_master).set_tracking_branch(remote_master)
     print('Created branch "{}" in library for module "{}".'.format(project, module))
 
     include_re,exclude_re,should_include = _build_should_include(cfg)
