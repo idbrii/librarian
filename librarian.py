@@ -58,6 +58,9 @@ Copy our 'love' module 'windfield' to a project 'puppypark':
 
 Copy changes in project 'puppypark' from module 'windfield' back to the Library:
     librarian checkin puppypark windfield
+
+Get updates to Library module 'windfield' from remote:
+    librarian pull windfield
     """
     parser = argparse.ArgumentParser(prog='librarian',
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -96,6 +99,13 @@ Copy changes in project 'puppypark' from module 'windfield' back to the Library:
     acquire.add_argument('clone_url',
                          metavar='clone-url',
                          help='The git origin URL to clone from.')
+
+    pull = subparsers.add_parser('pull',
+                                 help='Update your Library copy of a module.')
+    pull.add_argument('--remote',
+                      help="The remote to pull changes from. Defaults to 'origin' or the remote if there's only one remote.")
+    pull.add_argument('module',
+                      help='The module to update with latest from its git remote.')
 
     checkout = subparsers.add_parser('checkout',
                                 help='Export a module into your project.')
@@ -211,12 +221,65 @@ url: {}
         master = repo.branches.master
         master.set_reference(remote_master.commit)
     except AttributeError:
-        # New branch
+        # New branch. All of our branches are named master -- even if remote uses main.
         master = repo.create_head('master', remote_master)
     master.set_tracking_branch(remote_master)
 
     master.checkout(force=True)
     print('\tCommit: {}\n\tMessage:\n{}\n'.format(master.commit.hexsha, master.commit.message.strip()))
+
+
+def _pull_module(args, config):
+    # librarian pull --remote origin windfield
+    module           = args.module
+    try:
+        kind         = config[args.module]['kind']
+    except KeyError:
+        print("ERROR: Module '{0}' doesn't exist in library. Have you run `librarian acquire blah {0} https://blah/{0}`?".format(module))
+        sys.exit(-1)
+    module_path      = config[args.module]['clone']
+    cfg              = config[kind]
+
+    src_repo = git.Repo(module_path)
+
+    if src_repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=True):
+        print('Failed to pull module {}. Library repo is dirty:\n{}'.format(module, module_path))
+        print(src_repo.git.status())
+        return
+
+    remote_name = args.remote
+    if not remote_name:
+        # Default to origin since it's the convention.
+        remote_name = 'origin'
+    
+    try:
+        origin = src_repo.remote(remote_name)
+    except ValueError as e:
+        if not args.remote and len(src_repo.remotes) == 1:
+            # Should be safe to use the only remote if it was renamed and user
+            # didn't ask for a specific name.
+            origin = src_repo.remotes[0]
+        else:
+            print('ERROR:', e)
+            sys.exit(1)
+
+    # All of our branches are named master -- even if remote uses main.
+    remote_master = _get_master_from_remote(origin)
+    dst = module_path.replace(os.path.expanduser('~'), '~', 1)
+
+    print('Pulling module "{0}" changes from "{1}" into {2}'.format(module, remote_master, dst))
+    master = src_repo.branches.master
+    before_sha = master.commit.hexsha
+    origin.pull(remote_master.remote_head)
+
+    if before_sha != master.commit.hexsha:
+        changelog = src_repo.git.log(f"{before_sha}..HEAD", pretty='  * %s', first_parent=True, reverse=True)
+        print('Changelog:')
+        print(changelog)
+        print('Latest:')
+        print('\tCommit: {}\n\tDate: {}\n  Message:\n{}\n'.format(master.commit.hexsha, master.commit.committed_datetime, master.commit.message.strip()))
+    else:
+        print('Already up to date.')
 
 
 def _find_src_module_path(path, root_marker, should_include_fn):
@@ -493,6 +556,9 @@ def main():
 
     elif args.action == 'acquire':
         _acquire_module(args, config)
+
+    elif args.action == 'pull':
+        _pull_module(args, config)
 
     elif args.action == 'checkout':
         _checkout_module(args, config)
