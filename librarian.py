@@ -435,8 +435,6 @@ def _checkout_module(args, config):
         print(target_repo.git.status())
         return
 
-    dst = target_path.replace(os.path.expanduser('~'), '~', 1)
-    print('Copying {0} module "{1}" into {2}'.format(kind, module, dst))
     src_repo = git.Repo(module_path)
     local_master = src_repo.refs.master
 
@@ -462,6 +460,8 @@ def _checkout_module(args, config):
     if not changelog:
         changelog = f"Latest message:\n\t"+ branch.commit.message.splitlines()[0].strip()
 
+    dst = target_path.replace(os.path.expanduser('~'), '~', 1)
+    print('Copying {0} module "{1}" into {2}'.format(kind, module, dst))
 
     include_re,exclude_re,should_include = _build_should_include(cfg)
 
