@@ -125,6 +125,13 @@ def _write_config(config):
         config.write(f)
 
 
+def _get_master_from_remote(remote):
+    try:
+        return remote.refs.master
+    except AttributeError as e:
+        return remote.refs.main
+
+
 def _apply_config(args, config):
     try:
         config.add_section(args.kind)
@@ -198,14 +205,15 @@ url: {}
     assert(origin.exists())
     print('Updating module "{}" to latest...'.format(args.module))
     origin.fetch()
+    remote_master = _get_master_from_remote(origin)
     try:
         # Already exists
         master = repo.branches.master
-        master.set_reference(origin.refs.master.commit)
+        master.set_reference(remote_master.commit)
     except AttributeError:
         # New branch
-        master = repo.create_head('master', origin.refs.master)
-    master.set_tracking_branch(origin.refs.master)
+        master = repo.create_head('master', remote_master)
+    master.set_tracking_branch(remote_master)
 
     master.checkout(force=True)
     print('\tCommit: {}\n\tMessage:\n{}\n'.format(master.commit.hexsha, master.commit.message.strip()))
@@ -325,7 +333,7 @@ def _checkout_module(args, config):
     dst = target_path.replace(os.path.expanduser('~'), '~', 1)
     print('Copying {0} module "{1}" into {2}'.format(kind, module, dst))
     src_repo = git.Repo(module_path)
-    master = src_repo.remotes.origin.refs.master
+    master = _get_master_from_remote(src_repo.remotes.origin)
     if len(src_repo.remotes) > 1:
         # TODO: Could we look at what master tracks instead of assuming origin?
         print('Warning: Multiple remotes found, but we only look at origin.')
