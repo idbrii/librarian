@@ -69,6 +69,7 @@ List all 'love' modules:
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description=about)
     subparsers = parser.add_subparsers(dest='action',
+                                       required=True,
                                        help='Deploy and track changes to modules in your projects.')
 
     acquire = subparsers.add_parser('config',
