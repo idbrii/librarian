@@ -148,7 +148,10 @@ def _get_master_from_remote(remote):
     try:
         return remote.refs.master
     except AttributeError as e:
-        return remote.refs.main
+        try:
+            return remote.refs.main
+    except AttributeError:
+        raise AttributeError("Expected a branched called 'master' or 'main'.")
 
 
 def _get_remote_or_bail(repo, name):
@@ -302,7 +305,7 @@ def _pull_module(args, config):
         return
 
     src_repo = git.Repo(module_path)
-    local_master = src_repo.refs.master
+    local_master = _get_master_from_remote(src_repo)
 
     origin = _get_remote_or_bail(src_repo, args.remote)
 
@@ -437,7 +440,7 @@ def _checkout_module(args, config):
         return
 
     src_repo = git.Repo(module_path)
-    local_master = src_repo.refs.master
+    local_master = _get_master_from_remote(src_repo)
 
     changelog = None
     try:
