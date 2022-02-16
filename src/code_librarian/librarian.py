@@ -150,8 +150,8 @@ def _get_master_from_remote(remote):
     except AttributeError as e:
         try:
             return remote.refs.main
-    except AttributeError:
-        raise AttributeError("Expected a branched called 'master' or 'main'.")
+        except AttributeError:
+            raise AttributeError("Expected a branched called 'master' or 'main'.")
 
 
 def _get_remote_or_bail(repo, name):
