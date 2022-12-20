@@ -8,6 +8,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from pathlib import Path
 import argparse
 import configparser
 import os
@@ -87,6 +88,10 @@ List all 'love' modules:
     acquire.add_argument('--root-marker',
                          default='',
                          help='A file that indicates the root of the module (may not be the root of the repo). Useful to ignore tests and example code in well-organized repos.')
+    acquire.add_argument('--no-copy-license',
+                         dest="copy_license",
+                         action="store_false",
+                         help='Skip trying to copy the license to the destination.')
     acquire.add_argument('--rename-single-file-root-marker',
                          default='',
                          help='If there is no root marker but there is a single file matching this regex, then rename it to the root marker.')
@@ -193,22 +198,26 @@ def _apply_config(args, config):
   include-pattern: {} -> {}
   exclude-pattern: {} -> {}
   root-marker: {} -> {}
+  copy-license: {} -> {}
   rename-single-file-root-marker: {} -> {}
         '''.format(
                    section.get('lib_path', '<none>'), args.path,
                    section.get('include_pattern', '<none>'), args.include_pattern,
                    section.get('exclude_pattern', '<none>'), args.exclude_pattern,
                    section.get('root_marker', '<none>'), args.root_marker,
+                   section.get('copy_license', True), args.copy_license,
                    section.get('rename_root_marker_pattern', '<none>'), args.rename_single_file_root_marker)
     has_data = (len(args.path) > 0
         or len(args.include_pattern) > 0
         or len(args.exclude_pattern) > 0
+        or len(args.copy_license) > 0
         or len(args.root_marker) > 0)
     if has_data:
         section['lib_path'] = args.path
         section['include_pattern'] = args.include_pattern
         section['exclude_pattern'] = args.exclude_pattern
         section['root_marker'] = args.root_marker
+        section['copy_license'] = str(args.copy_license)
         section['rename_root_marker_pattern'] = str(args.rename_single_file_root_marker)
     else:
         # we just outputted the last data. Good enough for now.
@@ -467,9 +476,18 @@ def _checkout_module(args, config):
     include_re,exclude_re,should_include = _build_should_include(cfg)
 
     root_marker = cfg['root_marker']
+    root_path = module_path
     module_path = _find_src_module_path(module_path, root_marker, should_include)
     is_update = os.path.exists(target_path)
     _copy_and_overwrite(module_path, target_path, should_include)
+    if cfg['copy_license'] == "True":
+        license_glob = "LICEN[CS]E*"
+        has_license_file = any(Path(module_path).glob(license_glob))
+        if not has_license_file:
+            # We only look for the license in root.
+            for license in Path(root_path).glob(license_glob):
+                shutil.copy(license, target_path)
+
     single = cfg['rename_root_marker_pattern']
     if single:
         renamed = _rename_if_single_file(target_path, root_marker, re.compile(single))
