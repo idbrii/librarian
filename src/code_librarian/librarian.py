@@ -3,12 +3,13 @@
 # Requires gitpython
 #   pip3 install gitpython
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals
+)
 
-from pathlib import Path
 import argparse
 import configparser
 import os
@@ -16,9 +17,9 @@ import pprint as pretty
 import re
 import shutil
 import sys
+from pathlib import Path
 
 import git
-
 
 ROOT_PATH = os.path.expanduser("~/.librarian/")
 CONFIG_PATH = os.path.join(ROOT_PATH, "config.ini")
@@ -26,9 +27,9 @@ CLONES_PATH = os.path.join(ROOT_PATH, "clones/")
 
 
 def _get_args():
-    '''
+    """
     _get_args() -> Namespace
-    '''
+    """
 
     about = """Librarian automates copying modules to and from projects
 
@@ -65,74 +66,101 @@ Get updates to Library module 'windfield' from remote:
 List all 'love' modules:
     librarian list --kind love
     """
-    parser = argparse.ArgumentParser(prog='librarian',
-                                     formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     description=about)
-    subparsers = parser.add_subparsers(dest='action',
-                                       required=True,
-                                       help='Deploy and track changes to modules in your projects.')
+    parser = argparse.ArgumentParser(
+        prog="librarian",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=about,
+    )
+    subparsers = parser.add_subparsers(
+        dest="action",
+        required=True,
+        help="Deploy and track changes to modules in your projects.",
+    )
 
-    acquire = subparsers.add_parser('config',
-                                    help='Configure a project kind: a category of projects that define how their managed.')
-    acquire.add_argument('kind',
-                         help='The category of module (what kind of project will it be used in).')
-    acquire.add_argument('--path',
-                         default='',
-                         help='The path from the project repo root where modules are added. ex: src/lib/')
-    acquire.add_argument('--include-pattern',
-                         default='',
-                         help='Regular expression of files to include when copying to project. If not provided, all files are included.')
-    acquire.add_argument('--exclude-pattern',
-                         default='',
-                         help='Regular expression of files to exclude when copying to project. If not provided, all files are included.')
-    acquire.add_argument('--root-marker',
-                         default='',
-                         help='A file that indicates the root of the module (may not be the root of the repo). Useful to ignore tests and example code in well-organized repos.')
-    acquire.add_argument('--no-copy-license',
-                         dest="copy_license",
-                         action="store_false",
-                         help='Skip trying to copy the license to the destination.')
-    acquire.add_argument('--rename-single-file-root-marker',
-                         default='',
-                         help='If there is no root marker but there is a single file matching this regex, then rename it to the root marker.')
+    acquire = subparsers.add_parser(
+        "config",
+        help="Configure a project kind: a category of projects that define how their managed.",
+    )
+    acquire.add_argument(
+        "kind", help="The category of module (what kind of project will it be used in)."
+    )
+    acquire.add_argument(
+        "--path",
+        default="",
+        help="The path from the project repo root where modules are added. ex: src/lib/",
+    )
+    acquire.add_argument(
+        "--include-pattern",
+        default="",
+        help="Regular expression of files to include when copying to project. If not provided, all files are included.",
+    )
+    acquire.add_argument(
+        "--exclude-pattern",
+        default="",
+        help="Regular expression of files to exclude when copying to project. If not provided, all files are included.",
+    )
+    acquire.add_argument(
+        "--root-marker",
+        default="",
+        help="A file that indicates the root of the module (may not be the root of the repo). Useful to ignore tests and example code in well-organized repos.",
+    )
+    acquire.add_argument(
+        "--no-copy-license",
+        dest="copy_license",
+        action="store_false",
+        help="Skip trying to copy the license to the destination.",
+    )
+    acquire.add_argument(
+        "--rename-single-file-root-marker",
+        default="",
+        help="If there is no root marker but there is a single file matching this regex, then rename it to the root marker.",
+    )
 
-    acquire = subparsers.add_parser('acquire',
-                                    help='Add a module to the Library to later checkout into a project.')
-    acquire.add_argument('kind',
-                         help='The category of module (what kind of project will it be used in).')
+    acquire = subparsers.add_parser(
+        "acquire", help="Add a module to the Library to later checkout into a project."
+    )
+    acquire.add_argument(
+        "kind", help="The category of module (what kind of project will it be used in)."
+    )
 
     # TODO: Consider providing a deploy name option? So penlight is the name and pl is the destination folder.
-    acquire.add_argument('module',
-                         help='The module to begin tracking in the Library. This name will be used to deploy the module in projects.')
-    acquire.add_argument('clone_url',
-                         metavar='clone-url',
-                         help='The git origin URL to clone from.')
+    acquire.add_argument(
+        "module",
+        help="The module to begin tracking in the Library. This name will be used to deploy the module in projects.",
+    )
+    acquire.add_argument(
+        "clone_url", metavar="clone-url", help="The git origin URL to clone from."
+    )
 
-    ls = subparsers.add_parser('list',
-                                 help='List modules in your Library.')
-    ls.add_argument('--kind',
-                      help='The kind of modules to list. Without this argument, list modules of every kind.')
+    ls = subparsers.add_parser("list", help="List modules in your Library.")
+    ls.add_argument(
+        "--kind",
+        help="The kind of modules to list. Without this argument, list modules of every kind.",
+    )
 
-    pull = subparsers.add_parser('pull',
-                                 help='Update your Library copy of a module.')
-    pull.add_argument('--remote',
-                      help="The remote to pull changes from. Defaults to 'origin' or the remote if there's only one remote.")
-    pull.add_argument('module',
-                      help='The module to update with latest from its git remote.')
+    pull = subparsers.add_parser("pull", help="Update your Library copy of a module.")
+    pull.add_argument(
+        "--remote",
+        help="The remote to pull changes from. Defaults to 'origin' or the remote if there's only one remote.",
+    )
+    pull.add_argument(
+        "module", help="The module to update with latest from its git remote."
+    )
 
-    checkout = subparsers.add_parser('checkout',
-                                help='Export a module into your project.')
-    checkout.add_argument('project',
-                     help='The project to use.')
-    checkout.add_argument('module',
-                     help='The module to copy into your project.')
+    checkout = subparsers.add_parser(
+        "checkout", help="Export a module into your project."
+    )
+    checkout.add_argument("project", help="The project to use.")
+    checkout.add_argument("module", help="The module to copy into your project.")
 
-    checkin = subparsers.add_parser('checkin',
-                                 help='Copy changes to a module from your project back to the Library.')
-    checkin.add_argument('project',
-                      help='The project to use.')
-    checkin.add_argument('module',
-                      help='The module to copy from your project to the Library.')
+    checkin = subparsers.add_parser(
+        "checkin",
+        help="Copy changes to a module from your project back to the Library.",
+    )
+    checkin.add_argument("project", help="The project to use.")
+    checkin.add_argument(
+        "module", help="The module to copy from your project to the Library."
+    )
 
     return parser.parse_args()
 
@@ -144,7 +172,7 @@ def _read_config():
 
 
 def _write_config(config):
-    with open(CONFIG_PATH, 'w') as f:
+    with open(CONFIG_PATH, "w") as f:
         config.write(f)
 
 
@@ -167,7 +195,7 @@ def _get_remote_or_bail(repo, name):
     remote_name = name
     if not remote_name:
         # Default to origin since it's the convention.
-        remote_name = 'origin'
+        remote_name = "origin"
 
     try:
         return repo.remote(remote_name)
@@ -177,12 +205,14 @@ def _get_remote_or_bail(repo, name):
             # didn't ask for a specific name.
             return repo.remotes[0]
         else:
-            print('ERROR:', e)
+            print("ERROR:", e)
             sys.exit(1)
 
 
-def _build_changelog(repo, before_sha, after_sha='HEAD'):
-    return repo.git.log(f"{before_sha}..{after_sha}", pretty='  * %s', first_parent=True, reverse=True)
+def _build_changelog(repo, before_sha, after_sha="HEAD"):
+    return repo.git.log(
+        f"{before_sha}..{after_sha}", pretty="  * %s", first_parent=True, reverse=True
+    )
 
 
 def _apply_config(args, config):
@@ -194,35 +224,44 @@ def _apply_config(args, config):
         section = config[args.kind]
         print("Kind '{}' already registered:".format(args.kind))
 
-    changes = '''  path: {} -> {}
+    changes = """  path: {} -> {}
   include-pattern: {} -> {}
   exclude-pattern: {} -> {}
   root-marker: {} -> {}
   copy-license: {} -> {}
   rename-single-file-root-marker: {} -> {}
-        '''.format(
-                   section.get('lib_path', '<none>'), args.path,
-                   section.get('include_pattern', '<none>'), args.include_pattern,
-                   section.get('exclude_pattern', '<none>'), args.exclude_pattern,
-                   section.get('root_marker', '<none>'), args.root_marker,
-                   section.get('copy_license', True), args.copy_license,
-                   section.get('rename_root_marker_pattern', '<none>'), args.rename_single_file_root_marker)
-    has_data = (len(args.path) > 0
+        """.format(
+        section.get("lib_path", "<none>"),
+        args.path,
+        section.get("include_pattern", "<none>"),
+        args.include_pattern,
+        section.get("exclude_pattern", "<none>"),
+        args.exclude_pattern,
+        section.get("root_marker", "<none>"),
+        args.root_marker,
+        section.get("copy_license", True),
+        args.copy_license,
+        section.get("rename_root_marker_pattern", "<none>"),
+        args.rename_single_file_root_marker,
+    )
+    has_data = (
+        len(args.path) > 0
         or len(args.include_pattern) > 0
         or len(args.exclude_pattern) > 0
         or len(args.copy_license) > 0
-        or len(args.root_marker) > 0)
+        or len(args.root_marker) > 0
+    )
     if has_data:
-        section['lib_path'] = args.path
-        section['include_pattern'] = args.include_pattern
-        section['exclude_pattern'] = args.exclude_pattern
-        section['root_marker'] = args.root_marker
-        section['copy_license'] = str(args.copy_license)
-        section['rename_root_marker_pattern'] = str(args.rename_single_file_root_marker)
+        section["lib_path"] = args.path
+        section["include_pattern"] = args.include_pattern
+        section["exclude_pattern"] = args.exclude_pattern
+        section["root_marker"] = args.root_marker
+        section["copy_license"] = str(args.copy_license)
+        section["rename_root_marker_pattern"] = str(args.rename_single_file_root_marker)
     else:
         # we just outputted the last data. Good enough for now.
-        print('(No config changes written.)')
-        changes = changes.replace('->', '')
+        print("(No config changes written.)")
+        changes = changes.replace("->", "")
     print(changes)
 
 
@@ -230,8 +269,14 @@ def _acquire_module(args, config):
     # librarian acquire love windfield https://github.com/adnzzzzZ/windfield.git
     clone_path = os.path.join(CLONES_PATH, args.module)
     repo = git.Repo.init(clone_path)
-    if repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=True):
-        print('Failed to checkout module {}. Target repo is dirty:\n{}'.format(args.module, clone_path))
+    if repo.is_dirty(
+        index=True, working_tree=True, untracked_files=True, submodules=True
+    ):
+        print(
+            "Failed to checkout module {}. Target repo is dirty:\n{}".format(
+                args.module, clone_path
+            )
+        )
         print(repo.git.status())
         return
 
@@ -239,37 +284,44 @@ def _acquire_module(args, config):
         config.add_section(args.module)
         section = config[args.module]
 
-        section['kind'] = args.kind
-        section['clone'] = clone_path
-        section['url'] = args.clone_url
+        section["kind"] = args.kind
+        section["clone"] = clone_path
+        section["url"] = args.clone_url
 
     except configparser.DuplicateSectionError:
         section = config[args.module]
-        print('''Module '{}' already registered:
+        print(
+            """Module '{}' already registered:
   kind: {}
   checkout: {}
   url: {}
-        '''.format(args.module,
-                   section['kind'],
-                   section['clone'],
-                   section['url']))
+        """.format(
+                args.module, section["kind"], section["clone"], section["url"]
+            )
+        )
 
     if len(repo.remotes) > 0:
-        print(f'Module "{args.module}" already exists in Library.\nUse "librarian pull {args.module}" to update.')
+        print(
+            f'Module "{args.module}" already exists in Library.\nUse "librarian pull {args.module}" to update.'
+        )
         return
 
     print('Cloning "{}" module "{}" into Library...'.format(args.kind, args.module))
-    origin = repo.create_remote('origin', args.clone_url)
+    origin = repo.create_remote("origin", args.clone_url)
 
-    assert(origin.exists())
+    assert origin.exists()
     origin.fetch()
     remote_master = _get_master_from_remote(origin)
     # New branch. All of our branches are named master -- even if remote uses main.
-    master = repo.create_head('master', remote_master)
+    master = repo.create_head("master", remote_master)
     master.set_tracking_branch(remote_master)
 
     master.checkout(force=True)
-    print('\tCommit: {}\n\tMessage:\n{}\n'.format(master.commit.hexsha, master.commit.message.strip()))
+    print(
+        "\tCommit: {}\n\tMessage:\n{}\n".format(
+            master.commit.hexsha, master.commit.message.strip()
+        )
+    )
 
 
 def _list_module(args, config):
@@ -279,9 +331,9 @@ def _list_module(args, config):
     count = 0
     for c in config:
         try:
-            kind = config[c]['kind']
+            kind = config[c]["kind"]
             if want_all or kind == want_kind:
-                url = config[c]['url']
+                url = config[c]["url"]
                 print(f"{c:10}\t\t{kind} module from {url}")
                 count += 1
         except KeyError:
@@ -296,19 +348,29 @@ def _list_module(args, config):
 
 def _pull_module(args, config):
     # librarian pull --remote origin windfield
-    module           = args.module
+    module = args.module
     try:
-        kind         = config[args.module]['kind']
+        kind = config[args.module]["kind"]
     except KeyError:
-        print("ERROR: Module '{0}' doesn't exist in library. Have you run `librarian acquire blah {0} https://blah/{0}`?".format(module))
+        print(
+            "ERROR: Module '{0}' doesn't exist in library. Have you run `librarian acquire blah {0} https://blah/{0}`?".format(
+                module
+            )
+        )
         sys.exit(-1)
-    module_path      = config[args.module]['clone']
-    cfg              = config[kind]
+    module_path = config[args.module]["clone"]
+    cfg = config[kind]
 
     src_repo = git.Repo(module_path)
 
-    if src_repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=True):
-        print('Failed to pull module {}. Library repo is dirty:\n{}'.format(module, module_path))
+    if src_repo.is_dirty(
+        index=True, working_tree=True, untracked_files=True, submodules=True
+    ):
+        print(
+            "Failed to pull module {}. Library repo is dirty:\n{}".format(
+                module, module_path
+            )
+        )
         print(src_repo.git.status())
         return
 
@@ -318,20 +380,30 @@ def _pull_module(args, config):
     origin = _get_remote_or_bail(src_repo, args.remote)
 
     remote_master = _get_master_from_remote(origin)
-    dst = module_path.replace(os.path.expanduser('~'), '~', 1)
+    dst = module_path.replace(os.path.expanduser("~"), "~", 1)
 
-    print('Pulling module "{0}" changes from "{1}" into {2}'.format(module, remote_master, dst))
+    print(
+        'Pulling module "{0}" changes from "{1}" into {2}'.format(
+            module, remote_master, dst
+        )
+    )
     before_sha = local_master.commit.hexsha
     origin.pull(remote_master.remote_head)
 
     if before_sha != local_master.commit.hexsha:
         changelog = _build_changelog(src_repo, before_sha)
-        print('Changelog:')
+        print("Changelog:")
         print(changelog)
-        print('Latest:')
-        print('\tCommit: {}\n\tDate: {}\n  Message:\n{}\n'.format(local_master.commit.hexsha, local_master.commit.committed_datetime, local_master.commit.message.strip()))
+        print("Latest:")
+        print(
+            "\tCommit: {}\n\tDate: {}\n  Message:\n{}\n".format(
+                local_master.commit.hexsha,
+                local_master.commit.committed_datetime,
+                local_master.commit.message.strip(),
+            )
+        )
     else:
-        print('Already up to date.')
+        print("Already up to date.")
 
 
 def _find_src_module_path(path, root_marker, should_include_fn):
@@ -340,38 +412,41 @@ def _find_src_module_path(path, root_marker, should_include_fn):
     _find_src_module_path(str, str, function) -> str
     """
     first_includeable = []
-    for dirpath,dirs,files in os.walk(path, topdown=True):
+    for dirpath, dirs, files in os.walk(path, topdown=True):
         markers = [dirpath for f in files if f == root_marker]
         if markers:
             return markers[0]
         if not first_includeable:
-            first_includeable = [dirpath for f in files if should_include_fn(dirpath, f)]
+            first_includeable = [
+                dirpath for f in files if should_include_fn(dirpath, f)
+            ]
         dirs[:] = [d for d in dirs if should_include_fn(dirpath, d)]
 
     # no marker found
     if first_includeable:
         return first_includeable[0]
     else:
-        print('Failed to file includable files in {}! Aborting...'.format(path))
+        print("Failed to file includable files in {}! Aborting...".format(path))
         sys.exit(-2)
 
 
 def _copy_and_overwrite(from_path, to_path, should_include_fn):
-    print('Copying {} to {}'.format(from_path, to_path))
+    print("Copying {} to {}".format(from_path, to_path))
     if not os.path.exists(from_path):
-        raise FileNotFoundError('No such file or directory: '+ from_path)
+        raise FileNotFoundError("No such file or directory: " + from_path)
 
     if os.path.exists(to_path):
         shutil.rmtree(to_path)
 
     def ignore(dir_path, items):
         return [f for f in items if not should_include_fn(dir_path, f)]
+
     shutil.copytree(from_path, to_path, ignore=ignore)
     _remove_empty_directories(to_path)
 
 
 def _remove_empty_directories(root):
-    for dirpath,dirs,files in os.walk(root, topdown=False):
+    for dirpath, dirs, files in os.walk(root, topdown=False):
         for directory in dirs:
             path = os.path.join(dirpath, directory)
             try:
@@ -387,10 +462,10 @@ def _rename_if_single_file(path, new_name, include_re):
     _rename_if_single_file(str, str) -> None
     """
     file = None
-    for dirpath,dirs,files in os.walk(path, topdown=True):
+    for dirpath, dirs, files in os.walk(path, topdown=True):
         if include_re:
             files = [f for f in files if include_re.fullmatch(f)]
-        has_relevant_dirs = any(['test' not in d and d != '.git' for d in dirs])
+        has_relevant_dirs = any(["test" not in d and d != ".git" for d in dirs])
         if not has_relevant_dirs and len(files) == 1:
             file = files[0]
             src = os.path.join(dirpath, file)
@@ -406,42 +481,63 @@ def _include_all(dirpath, f):
     """
     return True
 
+
 def _build_should_include(cfg):
     include_re = None
     exclude_re = None
-    if len(cfg['include_pattern']) > 0:
-        include_re = re.compile(cfg['include_pattern'])
-    if len(cfg['exclude_pattern']) > 0:
-        exclude_re = re.compile(cfg['exclude_pattern'])
+    if len(cfg["include_pattern"]) > 0:
+        include_re = re.compile(cfg["include_pattern"])
+    if len(cfg["exclude_pattern"]) > 0:
+        exclude_re = re.compile(cfg["exclude_pattern"])
 
     if include_re is None and exclude_re is None:
+
         def should_include(dir_path, f):
-            return f != '.git'
+            return f != ".git"
+
     else:
+
         def should_include(dir_path, f):
-            return (f != '.git'
-                    and (include_re is None or include_re.fullmatch(f) is not None or os.path.isdir(os.path.join(dir_path,f)))
-                    and (exclude_re is None or exclude_re.fullmatch(f) is None))
+            return (
+                f != ".git"
+                and (
+                    include_re is None
+                    or include_re.fullmatch(f) is not None
+                    or os.path.isdir(os.path.join(dir_path, f))
+                )
+                and (exclude_re is None or exclude_re.fullmatch(f) is None)
+            )
+
     return include_re, exclude_re, should_include
 
 
 def _checkout_module(args, config):
     # librarian checkout puppypark windfield
-    project          = args.project
-    module           = args.module
+    project = args.project
+    module = args.module
     try:
-        kind         = config[args.module]['kind']
+        kind = config[args.module]["kind"]
     except KeyError:
-        print("ERROR: Module '{0}' doesn't exist in library. Have you run `librarian acquire blah {0} https://blah/{0}`?".format(module))
+        print(
+            "ERROR: Module '{0}' doesn't exist in library. Have you run `librarian acquire blah {0} https://blah/{0}`?".format(
+                module
+            )
+        )
         sys.exit(-1)
     target_repo_path = _get_project_dir(args.project)
-    target_path      = os.path.join(target_repo_path, config[kind]['lib_path'], args.module)
-    module_path      = config[args.module]['clone']
-    cfg              = config[kind]
-    target_repo      = git.Repo(target_repo_path)
+    target_path = os.path.join(target_repo_path, config[kind]["lib_path"], args.module)
+    module_path = config[args.module]["clone"]
+    cfg = config[kind]
+    target_repo = git.Repo(target_repo_path)
 
-    if target_repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=True):
-        print('Failed to checkout module {}. Target repo is dirty:\n{}'.format(module, target_repo_path))
+    if target_repo.is_dirty(
+        index=True, working_tree=True, untracked_files=True, submodules=True
+    ):
+        print(
+            "Failed to checkout module {}. Target repo is dirty:\n{}".format(
+                module, target_repo_path
+            )
+        )
         print(target_repo.git.status())
         return
 
@@ -457,30 +553,43 @@ def _checkout_module(args, config):
         branch.set_reference(local_master.commit)
 
         if before_sha == branch.commit.hexsha:
-            print(f'Module "{module}" branch "{project}" is already at "{local_master}".')
-            changelog = f"Reverting to {local_master}. Message:\n\t"+ branch.commit.message.splitlines()[0].strip()
+            print(
+                f'Module "{module}" branch "{project}" is already at "{local_master}".'
+            )
+            changelog = (
+                f"Reverting to {local_master}. Message:\n\t"
+                + branch.commit.message.splitlines()[0].strip()
+            )
         else:
-            changelog = "Changelog:\n" + _build_changelog(src_repo, before_sha, branch.commit.hexsha)
-            print(f'Updated branch "{project}" in library for module "{module}" to "{local_master}".')
+            changelog = "Changelog:\n" + _build_changelog(
+                src_repo, before_sha, branch.commit.hexsha
+            )
+            print(
+                f'Updated branch "{project}" in library for module "{module}" to "{local_master}".'
+            )
     except IndexError:
         # New branch
-        branch = src_repo.create_head(project, local_master).set_tracking_branch(local_master.tracking_branch())
+        branch = src_repo.create_head(project, local_master).set_tracking_branch(
+            local_master.tracking_branch()
+        )
         print('Created branch "{}" in library for module "{}".'.format(project, module))
 
     if not changelog:
-        changelog = "Latest message:\n\t"+ branch.commit.message.splitlines()[0].strip()
+        changelog = (
+            "Latest message:\n\t" + branch.commit.message.splitlines()[0].strip()
+        )
 
-    dst = target_path.replace(os.path.expanduser('~'), '~', 1)
+    dst = target_path.replace(os.path.expanduser("~"), "~", 1)
     print('Copying {0} module "{1}" into {2}'.format(kind, module, dst))
 
-    include_re,exclude_re,should_include = _build_should_include(cfg)
+    include_re, exclude_re, should_include = _build_should_include(cfg)
 
-    root_marker = cfg['root_marker']
+    root_marker = cfg["root_marker"]
     root_path = module_path
     module_path = _find_src_module_path(module_path, root_marker, should_include)
     is_update = os.path.exists(target_path)
     _copy_and_overwrite(module_path, target_path, should_include)
-    if cfg['copy_license'] == "True":
+    if cfg["copy_license"] == "True":
         license_glob = "LICEN[CS]E*"
         has_license_file = any(Path(module_path).glob(license_glob))
         if not has_license_file:
@@ -488,71 +597,90 @@ def _checkout_module(args, config):
             for license in Path(root_path).glob(license_glob):
                 shutil.copy(license, target_path)
 
-    single = cfg['rename_root_marker_pattern']
+    single = cfg["rename_root_marker_pattern"]
     if single:
         renamed = _rename_if_single_file(target_path, root_marker, re.compile(single))
         if renamed:
-            config[module]['renamed_root_marker'] = renamed
+            config[module]["renamed_root_marker"] = renamed
 
-    if target_repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=True):
+    if target_repo.is_dirty(
+        index=True, working_tree=True, untracked_files=True, submodules=True
+    ):
         target_repo.git.add(A=True)
-        action = 'Updated' if is_update else 'Added'
-        msg = '''Librarian: {1} module {0}
+        action = "Updated" if is_update else "Added"
+        msg = """Librarian: {1} module {0}
 
 {0} is from {2}.
 
 {4}
 
 Latest:
-\t{0}@{3}'''.format(module, action, config[args.module]['url'], branch.commit.hexsha, changelog)
+\t{0}@{3}""".format(
+            module, action, config[args.module]["url"], branch.commit.hexsha, changelog
+        )
         target_repo.index.commit(msg)
-        print('Commit complete:\n'+ msg)
+        print("Commit complete:\n" + msg)
     else:
-        print('No changes to apply')
+        print("No changes to apply")
 
 
 def _checkin_module(args, config):
     # librarian checkin puppypark windfield
-    module           = args.module
-    project          = args.project
+    module = args.module
+    project = args.project
     try:
-        kind         = config[args.module]['kind']
+        kind = config[args.module]["kind"]
     except KeyError:
-        print("ERROR: Module '{0}' doesn't exist in library. Have you run `librarian acquire blah {0} https://blah/{0}`?".format(module))
+        print(
+            "ERROR: Module '{0}' doesn't exist in library. Have you run `librarian acquire blah {0} https://blah/{0}`?".format(
+                module
+            )
+        )
         sys.exit(-1)
 
-    working_dir      = _get_project_dir(args.project)
-    src_path         = os.path.join(working_dir, config[kind]['lib_path'], args.module)
-    module_repo_path = config[args.module]['clone']
-    cfg              = config[kind]
+    working_dir = _get_project_dir(args.project)
+    src_path = os.path.join(working_dir, config[kind]["lib_path"], args.module)
+    module_repo_path = config[args.module]["clone"]
+    cfg = config[kind]
 
     repo = git.Repo(module_repo_path)
-    if repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=True):
-        print('Failed to checkin module {}. module repo is dirty:\n{}'.format(module, module_repo_path))
+    if repo.is_dirty(
+        index=True, working_tree=True, untracked_files=True, submodules=True
+    ):
+        print(
+            "Failed to checkin module {}. module repo is dirty:\n{}".format(
+                module, module_repo_path
+            )
+        )
         print(repo.git.status())
         return
 
-    dst = src_path.replace(os.path.expanduser('~'), '~', 1)
+    dst = src_path.replace(os.path.expanduser("~"), "~", 1)
     try:
         repo.heads[project].checkout()
     except IndexError:
-        print("ERROR: Branch '{}' doesn't exist in library for module '{}'. Have you run `librarian checkout {} {}`?".format(project, module, project, module))
+        print(
+            "ERROR: Branch '{}' doesn't exist in library for module '{}'. Have you run `librarian checkout {} {}`?".format(
+                project, module, project, module
+            )
+        )
         sys.exit(-1)
 
     print('Copying module "{}" from {}'.format(module, dst))
 
-    include_re,exclude_re,should_include = _build_should_include(cfg)
+    include_re, exclude_re, should_include = _build_should_include(cfg)
 
-    root_marker = cfg['root_marker']
+    root_marker = cfg["root_marker"]
     dst_path = _find_src_module_path(module_repo_path, root_marker, should_include)
 
     restore_git = None
     if dst_path == module_repo_path:
         # If we're operating on the top-level, then we need to save our .git
         # folder!
-        dot_git = os.path.join(dst_path, '.git')
-        temp_git = os.path.join(dst_path, '..', '.git')
+        dot_git = os.path.join(dst_path, ".git")
+        temp_git = os.path.join(dst_path, "..", ".git")
         shutil.move(dot_git, temp_git)
+
         def restore_git():
             shutil.move(temp_git, dot_git)
 
@@ -562,42 +690,51 @@ def _checkin_module(args, config):
         _copy_and_overwrite(src_path, dst_path, _include_all)
     except FileNotFoundError:
         # TODO: Need clearer error here. How can I correct this if I cloned my project? Just run librarian anyway?
-        print("ERROR: Module '{1}' cannot be found in project '{0}'. Have you run `librarian checkout {0} {1}`?".format(project, module))
+        print(
+            "ERROR: Module '{1}' cannot be found in project '{0}'. Have you run `librarian checkout {0} {1}`?".format(
+                project, module
+            )
+        )
         sys.exit(-1)
     finally:
         if restore_git:
             restore_git()
 
-    single = cfg['rename_root_marker_pattern']
+    single = cfg["rename_root_marker_pattern"]
     if single:
-        file = config[module].get('renamed_root_marker', '')
+        file = config[module].get("renamed_root_marker", "")
         if file:
-            _rename_if_single_file(dst_path, file, re.compile(cfg['root_marker']))
+            _rename_if_single_file(dst_path, file, re.compile(cfg["root_marker"]))
 
     # TODO: nothing has changed, but these all return true.
     # print(repo.is_dirty(index=True))
     # print(repo.is_dirty(working_tree=True))
     # print(repo.is_dirty(untracked_files=True))
     # print(repo.is_dirty(submodules=True))
-    if repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=True):
+    if repo.is_dirty(
+        index=True, working_tree=True, untracked_files=True, submodules=True
+    ):
 
         # We deleted everything above. Restore any deleted files that
         # weren't copied to the project.
         for i in repo.index.diff(None):
-            if i.deleted_file and not should_include('', i.a_path):
-                repo.git.checkout('--', i.a_path)
+            if i.deleted_file and not should_include("", i.a_path):
+                repo.git.checkout("--", i.a_path)
 
         project_repo = git.Repo(working_dir)
         repo.git.add(A=True)
-        msg = '''Librarian: Update with {0}'s latest
+        msg = """Librarian: Update with {0}'s latest
 
 \t{0}@{1}
-\tMessage:\n{2}'''.format(project, project_repo.head.commit.hexsha, project_repo.head.commit.message.strip())
+\tMessage:\n{2}""".format(
+            project,
+            project_repo.head.commit.hexsha,
+            project_repo.head.commit.message.strip(),
+        )
         repo.index.commit(msg)
-        print('Commit complete:\n'+ msg)
+        print("Commit complete:\n" + msg)
     else:
-        print('No changes to apply')
-
+        print("No changes to apply")
 
 
 def _get_project_dir(project):
@@ -610,7 +747,11 @@ def _get_project_dir(project):
     """
     working_dir = os.getcwd()
     if working_dir.find(project) < 0:
-        print("Current path ({}) doesn't contain name of project '{}'.".format(working_dir, project))
+        print(
+            "Current path ({}) doesn't contain name of project '{}'.".format(
+                working_dir, project
+            )
+        )
         try:
             answer = input("Are you in the right place? ").lower()
         except EOFError:
@@ -618,8 +759,8 @@ def _get_project_dir(project):
         if not answer:
             print("n")
             print("(Failed to read stdin. Assuming no.)")
-            answer = 'n'
-        if answer[0] != 'y':
+            answer = "n"
+        if answer[0] != "y":
             sys.exit(-1)
     return working_dir
 
@@ -628,22 +769,22 @@ def main():
     os.makedirs(CLONES_PATH, exist_ok=True)
     config = _read_config()
     args = _get_args()
-    if   args.action == 'config':
+    if args.action == "config":
         _apply_config(args, config)
 
-    elif args.action == 'list':
+    elif args.action == "list":
         _list_module(args, config)
 
-    elif args.action == 'acquire':
+    elif args.action == "acquire":
         _acquire_module(args, config)
 
-    elif args.action == 'pull':
+    elif args.action == "pull":
         _pull_module(args, config)
 
-    elif args.action == 'checkout':
+    elif args.action == "checkout":
         _checkout_module(args, config)
 
-    elif args.action == 'checkin':
+    elif args.action == "checkin":
         _checkin_module(args, config)
 
     _write_config(config)
