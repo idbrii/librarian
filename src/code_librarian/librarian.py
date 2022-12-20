@@ -14,7 +14,6 @@ import os
 import pprint as pretty
 import re
 import shutil
-import subprocess
 import sys
 
 import git
@@ -147,7 +146,7 @@ def _write_config(config):
 def _get_master_from_remote(remote):
     try:
         return remote.refs.master
-    except AttributeError as e:
+    except AttributeError:
         try:
             return remote.refs.main
         except AttributeError:
@@ -224,7 +223,7 @@ def _acquire_module(args, config):
     repo = git.Repo.init(clone_path)
     if repo.is_dirty(index=True, working_tree=True, untracked_files=True, submodules=True):
         print('Failed to checkout module {}. Target repo is dirty:\n{}'.format(args.module, clone_path))
-        print(target_repo.git.status())
+        print(repo.git.status())
         return
 
     try:
@@ -267,7 +266,7 @@ def _acquire_module(args, config):
 def _list_module(args, config):
     # librarian list --kind love
     want_kind = args.kind
-    want_all = want_kind == None
+    want_all = want_kind is None
     count = 0
     for c in config:
         try:
@@ -276,7 +275,7 @@ def _list_module(args, config):
                 url = config[c]['url']
                 print(f"{c:10}\t\t{kind} module from {url}")
                 count += 1
-        except KeyError as e:
+        except KeyError:
             # Entry for a kind, not a module.
             pass
 
@@ -370,7 +369,7 @@ def _remove_empty_directories(root):
             path = os.path.join(dirpath, directory)
             try:
                 os.rmdir(path)
-            except OSError as ex:
+            except OSError:
                 # Wasn't empty, couldn't delete.
                 pass
 
@@ -462,7 +461,7 @@ def _checkout_module(args, config):
         print('Created branch "{}" in library for module "{}".'.format(project, module))
 
     if not changelog:
-        changelog = f"Latest message:\n\t"+ branch.commit.message.splitlines()[0].strip()
+        changelog = "Latest message:\n\t"+ branch.commit.message.splitlines()[0].strip()
 
     dst = target_path.replace(os.path.expanduser('~'), '~', 1)
     print('Copying {0} module "{1}" into {2}'.format(kind, module, dst))
