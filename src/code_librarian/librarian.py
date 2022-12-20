@@ -308,21 +308,19 @@ def _pull_module(args, config):
 
     origin = _get_remote_or_bail(src_repo, args.remote)
 
-    # All of our branches are named master -- even if remote uses main.
     remote_master = _get_master_from_remote(origin)
     dst = module_path.replace(os.path.expanduser('~'), '~', 1)
 
     print('Pulling module "{0}" changes from "{1}" into {2}'.format(module, remote_master, dst))
-    master = src_repo.branches.master
-    before_sha = master.commit.hexsha
+    before_sha = local_master.commit.hexsha
     origin.pull(remote_master.remote_head)
 
-    if before_sha != master.commit.hexsha:
+    if before_sha != local_master.commit.hexsha:
         changelog = _build_changelog(src_repo, before_sha)
         print('Changelog:')
         print(changelog)
         print('Latest:')
-        print('\tCommit: {}\n\tDate: {}\n  Message:\n{}\n'.format(master.commit.hexsha, master.commit.committed_datetime, master.commit.message.strip()))
+        print('\tCommit: {}\n\tDate: {}\n  Message:\n{}\n'.format(local_master.commit.hexsha, local_master.commit.committed_datetime, local_master.commit.message.strip()))
     else:
         print('Already up to date.')
 
